@@ -1,0 +1,151 @@
+{
+  "entities": {
+    "Paciente": {
+      "title": "Paciente",
+      "description": "Cadastro de pacientes do sistema",
+      "type": "object",
+      "properties": {
+        "id_paciente": { "type": "string", "description": "ID formatado (Ex: PAC-0001)" },
+        "nome": { "type": "string", "description": "Nome completo" },
+        "sexo": { "type": "string", "description": "Sexo biológico" },
+        "data_nascimento": { "type": "string", "format": "date", "description": "Data de nascimento" },
+        "telefone": { "type": "string" },
+        "primeira_avaliacao": { "type": "string", "format": "date" },
+        "diagnostico_principal": { "type": "string" },
+        "observacoes": { "type": "string" },
+        "status": { "type": "string" },
+        "proxima_jornada": { "type": "integer" },
+        "data_criacao": { "type": "string", "format": "date-time" },
+        "uid": { "type": "string", "description": "ID do usuário (médico) dono do registro" }
+      },
+      "required": ["id_paciente", "nome", "sexo", "data_nascimento", "uid"]
+    },
+    "Sessao": {
+      "title": "Sessão",
+      "description": "Registro longitudinal de sessões",
+      "type": "object",
+      "properties": {
+        "paciente_id": { "type": "string" },
+        "jornada_id": { "type": "string" },
+        "sessao_n": { "type": "integer" },
+        "data_sessao": { "type": "string", "format": "date-time" },
+        "fase": { "type": "string" },
+        "qualidade_sinal": { "type": "string" },
+        "queixa_principal": { "type": "string" },
+        "vfc_pre_pos": {
+          "type": "object",
+          "properties": {
+            "fc_media": { "type": "object", "properties": { "pre": { "type": "number" }, "pos": { "type": "number" } } },
+            "rmssd": { "type": "object", "properties": { "pre": { "type": "number" }, "pos": { "type": "number" } } },
+            "sdnn": { "type": "object", "properties": { "pre": { "type": "number" }, "pos": { "type": "number" } } },
+            "pnn50": { "type": "object", "properties": { "pre": { "type": "number" }, "pos": { "type": "number" } } },
+            "lfhf": { "type": "object", "properties": { "pre": { "type": "number" }, "pos": { "type": "number" } } },
+            "total_power": { "type": "object", "properties": { "pre": { "type": "number" }, "pos": { "type": "number" } } }
+          }
+        },
+        "contexto_clinico": {
+          "type": "object",
+          "properties": {
+            "dor_eva": { "type": "number" },
+            "mobilidade": { "type": "number" },
+            "forca": { "type": "number" },
+            "controle_motor": { "type": "number" },
+            "gordura_corporal": { "type": "number" },
+            "agua_ice": { "type": "number" },
+            "idade_celular": { "type": "number" },
+            "conduta": { "type": "string" }
+          }
+        },
+        "resposta_subjetiva": { "type": "string" },
+        "resultados_automaticos": {
+          "type": "object",
+          "properties": {
+            "saua_pre": { "type": "string" },
+            "classificacao": { "type": "string" },
+            "saua_pos": { "type": "string" },
+            "das": { "type": "string" },
+            "ira": { "type": "string" },
+            "metabolico": { "type": "string" },
+            "locomotor": { "type": "number" },
+            "integrado": { "type": "string" },
+            "iet": { "type": "string" },
+            "isc": { "type": "string" },
+            "ir": { "type": "string" },
+            "analise_texto": { "type": "string" }
+          }
+        },
+        "observacoes": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["paciente_id", "data_sessao", "uid"]
+    },
+    "Referencia": {
+      "title": "Referência",
+      "description": "Base científica e parâmetros clínicos",
+      "type": "object",
+      "properties": {
+        "tipo": { "type": "string", "description": "Ex: RMSSD, HRV, etc" },
+        "idade_min": { "type": "integer" },
+        "idade_max": { "type": "integer" },
+        "valor_referencia": { "type": "number" },
+        "peso": { "type": "number" },
+        "justificativa": { "type": "string" },
+        "relevancia": { "type": "string", "description": "Classificação de relevância pela IA" },
+        "data_atualizacao": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tipo", "valor_referencia"]
+    },
+    "Jornada": {
+      "title": "Jornada Clínica",
+      "description": "Controle de fases do paciente",
+      "type": "object",
+      "properties": {
+        "paciente_id": { "type": "string" },
+        "nome": { "type": "string" },
+        "status": { "type": "string" },
+        "etapa": { "type": "integer" },
+        "leitura": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["paciente_id", "nome", "uid"]
+    },
+    "Laudo": {
+      "title": "Laudo Automático",
+      "description": "Relatório clínico gerado por IA",
+      "type": "object",
+      "properties": {
+        "sessao_id": { "type": "string" },
+        "paciente_id": { "type": "string" },
+        "conteudo": { "type": "string" },
+        "data_geracao": { "type": "string", "format": "date-time" },
+        "uid": { "type": "string" }
+      },
+      "required": ["sessao_id", "paciente_id", "conteudo", "uid"]
+    },
+    "Profissional": {
+      "title": "Profissional",
+      "description": "Cadastro de profissionais da equipe multidisciplinar",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "description": "Nome completo" },
+        "profissao": { "type": "string", "description": "Profissão (Ex: Fisioterapeuta, Nutricionista)" },
+        "conselho": { "type": "string", "description": "Conselho Profissional (Ex: CREFITO, CRM)" },
+        "registro": { "type": "string", "description": "Número de registro no conselho" },
+        "email": { "type": "string" },
+        "telefone": { "type": "string" },
+        "foto_url": { "type": "string" },
+        "data_cadastro": { "type": "string", "format": "date-time" },
+        "uid": { "type": "string", "description": "ID do usuário dono do registro" }
+      },
+      "required": ["nome", "profissao", "conselho", "registro", "uid"]
+    }
+  },
+  "firestore": {
+    "/pacientes/{pacienteId}": { "schema": "Paciente", "description": "Coleção de pacientes" },
+    "/sessoes/{sessaoId}": { "schema": "Sessao", "description": "Coleção de sessões" },
+    "/referencias/{referenciaId}": { "schema": "Referencia", "description": "Coleção de referências científicas" },
+    "/jornadas/{jornadaId}": { "schema": "Jornada", "description": "Coleção de jornadas" },
+    "/laudos/{laudoId}": { "schema": "Laudo", "description": "Coleção de laudos" },
+    "/profissionais/{profissionalId}": { "schema": "Profissional", "description": "Coleção de profissionais da equipe" }
+  }
+}

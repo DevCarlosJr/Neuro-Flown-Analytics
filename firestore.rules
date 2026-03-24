@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    
+    function isValidPaciente(data) {
+      return data.id_paciente is string && data.id_paciente.size() > 0 &&
+             data.nome is string && data.nome.size() > 0 && data.nome.size() < 200 &&
+             data.sexo is string && 
+             data.data_nascimento is string &&
+             data.uid == request.auth.uid;
+    }
+    
+    function isValidSessao(data) {
+      return data.paciente_id is string && 
+             data.uid == request.auth.uid;
+    }
+    
+    function isValidJornada(data) {
+      return data.paciente_id is string && data.uid == request.auth.uid;
+    }
+    
+    function isValidLaudo(data) {
+      return data.paciente_id is string && data.uid == request.auth.uid;
+    }
+
+    function isValidProfissional(data) {
+      return data.nome is string && data.nome.size() > 0 &&
+             data.profissao is string && data.profissao.size() > 0 &&
+             data.conselho is string && data.conselho.size() > 0 &&
+             data.registro is string && data.registro.size() > 0 &&
+             data.uid == request.auth.uid;
+    }
+
+    // Pacientes
+    match /pacientes/{pacienteId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidPaciente(request.resource.data);
+      allow update: if isDocOwner() && isValidPaciente(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+    
+    // Sessoes
+    match /sessoes/{sessaoId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidSessao(request.resource.data);
+      allow update: if isDocOwner() && isValidSessao(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+    
+    // Jornadas
+    match /jornadas/{jornadaId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidJornada(request.resource.data);
+      allow update: if isDocOwner() && isValidJornada(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+    
+    // Laudos
+    match /laudos/{laudoId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidLaudo(request.resource.data);
+      allow update: if isDocOwner() && isValidLaudo(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+    
+    // Referencias (Public read, Admin/Authenticated write for now)
+    match /referencias/{referenciaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // In a real app, this would be restricted to admins
+    }
+
+    // Profissionais
+    match /profissionais/{profissionalId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidProfissional(request.resource.data);
+      allow update: if isDocOwner() && isValidProfissional(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+  }
+}
