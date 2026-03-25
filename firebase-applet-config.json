@@ -1,10 +1,8 @@
 {
-  "projectId": "gen-lang-client-0474145949",
-  "appId": "1:871755976652:web:43cc0f896a25d2cf4c9769",
-  "apiKey": "AIzaSyD014ZotHFlRZPTI1hGhBA7d9gh4XT--HU",
-  "authDomain": "gen-lang-client-0474145949.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-dd74d107-fa72-49fa-836e-2c156585ea38",
-  "storageBucket": "gen-lang-client-0474145949.firebasestorage.app",
-  "messagingSenderId": "871755976652",
-  "measurementId": ""
+  "apiKey": "AIzaSyB1GqHdWqi43-BXR2FNsUTSj5mpzWSW4G0",
+  "authDomain": "neuro-flow-50e38.firebaseapp.com",
+  "projectId": "neuro-flow-50e38",
+  "storageBucket": "neuro-flow-50e38.firebasestorage.app",
+  "messagingSenderId": "655892167106",
+  "appId": "1:655892167106:web:a402a99273527627f6fe5b"
 }

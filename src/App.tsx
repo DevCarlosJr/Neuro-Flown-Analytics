@@ -23,7 +23,6 @@ import {
   FileDown,
   RefreshCw,
   Microscope,
-  Calculator,
   Stethoscope,
   Trash2,
   Edit,
@@ -49,6 +48,7 @@ import {
   Bar,
   Legend
 } from 'recharts';
+import { Toaster, toast } from 'sonner';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { 
@@ -62,7 +62,8 @@ import {
   updateDoc, 
   deleteDoc,
   orderBy,
-  limit
+  limit,
+  getDocFromServer
 } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -70,6 +71,107 @@ import ReactMarkdown from 'react-markdown';
 import { cn, formatDate } from './lib/utils';
 import { analyzeSessionData, generateCustomReport, analyzeScientificReference, calculateAutomaticResults } from './lib/gemini';
 import { Paciente, Sessao, Referencia, Jornada, Laudo, Profissional } from './types';
+
+// --- Types & Enums ---
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// --- Error Boundary ---
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      let errorMessage = "Ocorreu um erro inesperado.";
+      try {
+        const parsed = JSON.parse(this.state.error.message);
+        if (parsed.error && parsed.operationType) {
+          errorMessage = `Erro no Firestore (${parsed.operationType}): ${parsed.error}`;
+        }
+      } catch (e) {
+        errorMessage = this.state.error.message || errorMessage;
+      }
+
+      return (
+        <div className="h-screen w-full flex items-center justify-center bg-red-50 p-6">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-4">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+              <AlertCircle className="text-red-600" size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Algo deu errado</h2>
+            <p className="text-slate-600">{errorMessage}</p>
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Recarregar Aplicativo
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // --- Components ---
 
@@ -116,7 +218,7 @@ const Card = ({ children, className, title, action, icon: Icon }: { children: Re
   </div>
 );
 
-const Button = ({ children, onClick, variant = 'primary', className, disabled, icon: Icon, type = 'button' }: any) => {
+const Button = ({ children, onClick, variant = 'primary', className, disabled, icon: Icon, type = 'button', loading }: any) => {
   const variants = {
     primary: "bg-[var(--primary)] text-white hover:opacity-90 shadow-md",
     secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
@@ -126,19 +228,27 @@ const Button = ({ children, onClick, variant = 'primary', className, disabled, i
   };
   
   return (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       type={type}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={cn(
-        "flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none",
+        "flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:pointer-events-none",
         variants[variant as keyof typeof variants],
         className
       )}
     >
-      {Icon && <Icon size={18} />}
-      {children}
-    </button>
+      {loading ? (
+        <RefreshCw className="animate-spin" size={18} />
+      ) : (
+        <>
+          {Icon && <Icon size={18} />}
+          {children}
+        </>
+      )}
+    </motion.button>
   );
 };
 
@@ -186,8 +296,19 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Auth
+  // Auth & Connection Test
   useEffect(() => {
+    const testConnection = async () => {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
+      }
+    };
+    testConnection();
+
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -219,32 +340,32 @@ export default function App() {
     const qPacientes = query(collection(db, 'pacientes'), where('uid', '==', user.uid));
     const unsubPacientes = onSnapshot(qPacientes, (snap) => {
       setPacientes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Paciente)));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'pacientes'));
 
     const qSessoes = query(collection(db, 'sessoes'), where('uid', '==', user.uid), orderBy('data_sessao', 'desc'));
     const unsubSessoes = onSnapshot(qSessoes, (snap) => {
       setSessoes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Sessao)));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'sessoes'));
 
     const qRefs = query(collection(db, 'referencias'));
     const unsubRefs = onSnapshot(qRefs, (snap) => {
       setReferencias(snap.docs.map(d => ({ id: d.id, ...d.data() } as Referencia)));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'referencias'));
 
     const qProfissionais = query(collection(db, 'profissionais'), where('uid', '==', user.uid));
     const unsubProfissionais = onSnapshot(qProfissionais, (snap) => {
       setProfissionais(snap.docs.map(d => ({ id: d.id, ...d.data() } as Profissional)));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'profissionais'));
 
     const qJornadas = query(collection(db, 'jornadas'), where('uid', '==', user.uid));
     const unsubJornadas = onSnapshot(qJornadas, (snap) => {
       setJornadas(snap.docs.map(d => ({ id: d.id, ...d.data() } as Jornada)));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'jornadas'));
 
     const qLaudos = query(collection(db, 'laudos'), where('uid', '==', user.uid));
     const unsubLaudos = onSnapshot(qLaudos, (snap) => {
       setLaudos(snap.docs.map(d => ({ id: d.id, ...d.data() } as Laudo)));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'laudos'));
 
     return () => {
       unsubPacientes();
@@ -266,7 +387,8 @@ export default function App() {
   );
 
   if (!user) return (
-    <div className={cn("h-screen w-full flex items-center justify-center relative overflow-hidden", theme)} style={{ fontFamily: 'var(--font-family)' }}>
+    <ErrorBoundary>
+      <div className={cn("h-screen w-full flex items-center justify-center relative overflow-hidden", theme)} style={{ fontFamily: 'var(--font-family)' }}>
       {/* Background Image with Overlay */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105 hover:scale-100"
@@ -359,10 +481,12 @@ export default function App() {
         © 2026 NeuroFlow Analytics • Tecnologia para Saúde Autonômica
       </div>
     </div>
+    </ErrorBoundary>
   );
 
   return (
-    <div className={cn("h-screen w-full flex bg-slate-50 overflow-hidden relative", theme)} style={{ fontFamily: 'var(--font-family)' }}>
+    <ErrorBoundary>
+      <div className={cn("h-screen w-full flex bg-slate-50 overflow-hidden relative", theme)} style={{ fontFamily: 'var(--font-family)' }}>
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 z-30 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
@@ -422,7 +546,6 @@ export default function App() {
           <div className="space-y-1">
             <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Atendimento</p>
             <SidebarItem icon={Activity} label="Análise de Sessão" active={activeTab === 'nova_sessao'} onClick={() => { setActiveTab('nova_sessao'); setSidebarOpen(false); }} />
-            <SidebarItem icon={Calculator} label="Cálculos" active={activeTab === 'calculos'} onClick={() => { setActiveTab('calculos'); setSidebarOpen(false); }} />
             <SidebarItem icon={RefreshCw} label="Histórico" active={activeTab === 'sessoes'} onClick={() => { setActiveTab('sessoes'); setSidebarOpen(false); }} />
             <SidebarItem icon={ChevronRight} label="Jornadas" active={activeTab === 'jornadas'} onClick={() => { setActiveTab('jornadas'); setSidebarOpen(false); }} />
           </div>
@@ -501,7 +624,6 @@ export default function App() {
               />
             )}
             {activeTab === 'nova_sessao' && <FormularioSessaoView pacientes={pacientes} user={user} pacienteId={selectedPacienteId || undefined} />}
-            {activeTab === 'calculos' && <CalculosSessaoView pacientes={pacientes} user={user} sessoes={sessoes} />}
             {activeTab === 'sessoes' && <SessoesView sessoes={sessoes} pacientes={pacientes} user={user} references={referencias} />}
             {activeTab === 'referencias' && <ReferenciasView referencias={referencias} />}
             {activeTab === 'relatorios' && <RelatoriosView pacientes={pacientes} sessoes={sessoes} />}
@@ -519,6 +641,8 @@ export default function App() {
         </AnimatePresence>
       </main>
     </div>
+      <Toaster position="top-right" richColors closeButton />
+    </ErrorBoundary>
   );
 }
 
@@ -1090,6 +1214,7 @@ function DashboardView({ pacientes, sessoes, onNewSession }: { pacientes: Pacien
 function PacientesView({ pacientes, user, onViewProntuario }: { pacientes: Paciente[], user: any, onViewProntuario: (id: string) => void }) {
   const [showModal, setShowModal] = useState(false);
   const [editingPaciente, setEditingPaciente] = useState<Paciente | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ 
     id_paciente: '',
     nome: '', 
@@ -1142,36 +1267,45 @@ function PacientesView({ pacientes, user, onViewProntuario }: { pacientes: Pacie
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    const path = 'pacientes';
     try {
       if (editingPaciente) {
-        await updateDoc(doc(db, 'pacientes', editingPaciente.id!), {
+        await updateDoc(doc(db, path, editingPaciente.id!), {
           ...formData,
           proxima_jornada: Number(formData.proxima_jornada),
         });
+        toast.success('Paciente atualizado com sucesso!', {
+          description: `${formData.nome} foi atualizado no sistema.`,
+          icon: <CheckCircle2 className="text-emerald-500" size={20} />,
+        });
       } else {
-        await addDoc(collection(db, 'pacientes'), {
+        await addDoc(collection(db, path), {
           ...formData,
           proxima_jornada: Number(formData.proxima_jornada),
           data_criacao: new Date().toISOString(),
           uid: user.uid
         });
+        toast.success('Paciente cadastrado com sucesso!', {
+          description: `${formData.nome} foi adicionado à sua base de dados.`,
+          icon: <CheckCircle2 className="text-emerald-500" size={20} />,
+        });
       }
       setShowModal(false);
       setEditingPaciente(null);
     } catch (error) {
-      console.error(error);
-      alert("Erro ao salvar paciente.");
+      handleFirestoreError(error, editingPaciente ? OperationType.UPDATE : OperationType.CREATE, path);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Deseja realmente excluir este paciente? Todos os dados vinculados serão mantidos, mas o cadastro será removido.")) {
-      try {
-        await deleteDoc(doc(db, 'pacientes', id));
-      } catch (error) {
-        console.error(error);
-        alert("Erro ao excluir paciente.");
-      }
+    const path = 'pacientes';
+    try {
+      await deleteDoc(doc(db, path, id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
     }
   };
 
@@ -1282,8 +1416,8 @@ function PacientesView({ pacientes, user, onViewProntuario }: { pacientes: Pacie
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
-                  <Button type="submit" className="flex-1">Salvar Paciente</Button>
+                  <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)} disabled={isSubmitting}>Cancelar</Button>
+                  <Button type="submit" className="flex-1" loading={isSubmitting}>Salvar Paciente</Button>
                 </div>
               </form>
             </div>
@@ -1296,6 +1430,7 @@ function PacientesView({ pacientes, user, onViewProntuario }: { pacientes: Pacie
 
 function SessoesView({ sessoes, pacientes, user, references }: { sessoes: Sessao[], pacientes: Paciente[], user: any, references: Referencia[] }) {
   const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSessao, setSelectedSessao] = useState<Sessao | null>(null);
   const [laudo, setLaudo] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -1308,17 +1443,28 @@ function SessoesView({ sessoes, pacientes, user, references }: { sessoes: Sessao
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await addDoc(collection(db, 'sessoes'), {
-      paciente_id: formData.paciente_id,
-      data_sessao: new Date().toISOString(),
-      vfc_pre_pos: {
-        rmssd: { pre: parseFloat(formData.rmssd), pos: parseFloat(formData.hrv) }
-      },
-      observacoes: formData.observacoes,
-      uid: user.uid
-    });
-    setShowModal(false);
-    setFormData({ paciente_id: '', rmssd: '', hrv: '', observacoes: '' });
+    setIsSubmitting(true);
+    const path = 'sessoes';
+    try {
+      await addDoc(collection(db, path), {
+        paciente_id: formData.paciente_id,
+        data_sessao: new Date().toISOString(),
+        vfc_pre_pos: {
+          rmssd: { pre: parseFloat(formData.rmssd), pos: parseFloat(formData.hrv) }
+        },
+        observacoes: formData.observacoes,
+        uid: user.uid
+      });
+      toast.success('Sessão registrada!', {
+        description: 'Os dados fisiológicos foram salvos com sucesso.'
+      });
+      setShowModal(false);
+      setFormData({ paciente_id: '', rmssd: '', hrv: '', observacoes: '' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, path);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAnalyze = async (sessao: Sessao) => {
@@ -1402,8 +1548,8 @@ function SessoesView({ sessoes, pacientes, user, references }: { sessoes: Sessao
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
-                  <Button type="submit" className="flex-1">Salvar Sessão</Button>
+                  <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)} disabled={isSubmitting}>Cancelar</Button>
+                  <Button type="submit" className="flex-1" loading={isSubmitting}>Salvar Sessão</Button>
                 </div>
               </form>
             </div>
@@ -1453,6 +1599,7 @@ function ReferenciasView({ referencias }: { referencias: Referencia[] }) {
   const [showModal, setShowModal] = useState(false);
   const [articleText, setArticleText] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [suggestion, setSuggestion] = useState<any>(null);
 
   const handleAnalyzeArticle = async () => {
@@ -1470,13 +1617,24 @@ function ReferenciasView({ referencias }: { referencias: Referencia[] }) {
 
   const handleSaveReference = async () => {
     if (!suggestion) return;
-    await addDoc(collection(db, 'referencias'), {
-      ...suggestion,
-      data_atualizacao: new Date().toISOString()
-    });
-    setShowModal(false);
-    setSuggestion(null);
-    setArticleText('');
+    setIsSubmitting(true);
+    const path = 'referencias';
+    try {
+      await addDoc(collection(db, path), {
+        ...suggestion,
+        data_atualizacao: new Date().toISOString()
+      });
+      toast.success('Referência salva!', {
+        description: 'A base científica foi atualizada com sucesso.'
+      });
+      setShowModal(false);
+      setSuggestion(null);
+      setArticleText('');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, path);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -1835,219 +1993,6 @@ function RelatoriosView({ pacientes, sessoes }: { pacientes: Paciente[], sessoes
   );
 }
 
-function CalculosSessaoView({ pacientes, user, sessoes }: { pacientes: Paciente[], user: any, sessoes: Sessao[] }) {
-  const [selectedPacienteId, setSelectedPacienteId] = useState('');
-  const [data, setData] = useState<any>({
-    jornada_id: '',
-    data_avaliacao: new Date().toISOString().split('T')[0],
-    sessao_n: 1,
-    fase: '',
-    qualidade_sinal: '',
-    queixa_principal: '',
-    fc_pre: 0, rmssd_pre: 0, sdnn_pre: 0, pnn50_pre: 0, lfhf_pre: 0, tp_pre: 0,
-    fc_pos: 0, rmssd_pos: 0, sdnn_pos: 0, pnn50_pos: 0, lfhf_pos: 0, tp_pos: 0,
-    dor_eva: 0, mobilidade: 0, forca: 0, controle_motor: 0, gordura: 0, agua_ice: 0, idade_celular: 0,
-    interpretacao: ''
-  });
-
-  const paciente = pacientes.find(p => p.id === selectedPacienteId);
-  const idade = paciente ? new Date().getFullYear() - new Date(paciente.data_nascimento).getFullYear() : 0;
-  
-  // Basic calculation logic (placeholders for complex formulas)
-  const rmssd_esperado = Math.max(15, 50 - (idade * 0.4));
-  const factor_idade_pre = 1.0; // Placeholder
-  
-  const calculateScore = (val: number, ref: number) => {
-    if (!ref) return 0;
-    const score = (val / ref) * 100;
-    return Math.min(100, Math.max(0, Math.round(score)));
-  };
-
-  const score_rmssd_pre = calculateScore(data.rmssd_pre, rmssd_esperado);
-  const score_sdnn_pre = calculateScore(data.sdnn_pre, 50);
-  const score_tp_pre = calculateScore(data.tp_pre, 1000);
-  const score_lfhf_pre = calculateScore(data.lfhf_pre, 1.5);
-  const score_pnn50_pre = calculateScore(data.pnn50_pre, 15);
-  const score_fc_pre = calculateScore(data.fc_pre, 70);
-  const penalidade_pre = 0;
-  const saua_pre = Math.round((score_rmssd_pre + score_sdnn_pre + score_tp_pre + score_lfhf_pre + score_pnn50_pre + score_fc_pre) / 6);
-  
-  const score_rmssd_pos = calculateScore(data.rmssd_pos, rmssd_esperado);
-  const score_sdnn_pos = calculateScore(data.sdnn_pos, 50);
-  const score_tp_pos = calculateScore(data.tp_pos, 1000);
-  const score_lfhf_pos = calculateScore(data.lfhf_pos, 1.5);
-  const score_pnn50_pos = calculateScore(data.pnn50_pos, 15);
-  const score_fc_pos = calculateScore(data.fc_pos, 70);
-  const penalidade_pos = 0;
-  const saua_pos = Math.round((score_rmssd_pos + score_sdnn_pos + score_tp_pos + score_lfhf_pos + score_pnn50_pos + score_fc_pos) / 6);
-
-  const das = saua_pos - saua_pre;
-  const ira = data.rmssd_pre > 0 ? ((data.rmssd_pos - data.rmssd_pre) / data.rmssd_pre).toFixed(2) : '0';
-  const score_metabolico = Math.round((saua_pre + saua_pos) / 2);
-  const score_locomotor = 40.0; // Placeholder
-  const score_integrado = Math.round((score_metabolico + score_locomotor) / 2);
-  
-  const Row = ({ label, value, unit, status, isInput, field, type = "number" }: any) => (
-    <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-      <td className="py-3 px-4 text-sm font-medium text-slate-700 bg-slate-50/30 w-1/4">{label}</td>
-      <td className="py-2 px-4 w-1/4">
-        {isInput ? (
-          <input
-            type={type}
-            value={value}
-            onChange={(e) => setData({ ...data, [field]: type === "number" ? parseFloat(e.target.value) : e.target.value })}
-            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-          />
-        ) : (
-          <span className="text-sm font-semibold text-slate-900">{value}</span>
-        )}
-      </td>
-      <td className="py-3 px-4 text-xs text-slate-500 w-1/6 italic">{unit}</td>
-      <td className="py-3 px-4 w-1/6">
-        <span className={cn(
-          "px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-          status === 'Controle' ? "bg-blue-100 text-blue-700" :
-          status === 'Dado bruto' ? "bg-slate-100 text-slate-600" :
-          status === 'Contexto' ? "bg-amber-100 text-amber-700" :
-          status === 'Cálculo' ? "bg-indigo-100 text-indigo-700" :
-          "bg-emerald-100 text-emerald-700"
-        )}>
-          {status}
-        </span>
-      </td>
-      <td className="py-3 px-4 text-xs text-slate-400 italic">---</td>
-    </tr>
-  );
-
-  return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      <div className="flex justify-between items-end bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-        <div className="space-y-4 flex-1 max-w-md">
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-            <Calculator className="text-indigo-600" />
-            Cálculos da Sessão Atual
-          </h2>
-          <Select
-            label="Selecionar Paciente"
-            value={selectedPacienteId}
-            onChange={(e: any) => setSelectedPacienteId(e.target.value)}
-            options={[
-              { label: 'Selecione um paciente...', value: '' },
-              ...pacientes.map(p => ({ label: `${p.nome} (${p.id_paciente})`, value: p.id }))
-            ]}
-          />
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" icon={RefreshCw} onClick={() => setData({
-            jornada_id: '', data_avaliacao: new Date().toISOString().split('T')[0], sessao_n: 1, fase: '', qualidade_sinal: '', queixa_principal: '',
-            fc_pre: 0, rmssd_pre: 0, sdnn_pre: 0, pnn50_pre: 0, lfhf_pre: 0, tp_pre: 0,
-            fc_pos: 0, rmssd_pos: 0, sdnn_pos: 0, pnn50_pos: 0, lfhf_pos: 0, tp_pos: 0,
-            dor_eva: 0, mobilidade: 0, forca: 0, controle_motor: 0, gordura: 0, agua_ice: 0, idade_celular: 0, interpretacao: ''
-          })}>Limpar</Button>
-          <Button icon={FileDown}>Exportar Planilha</Button>
-        </div>
-      </div>
-
-      <div className="bg-slate-900 text-white px-8 py-3 rounded-t-3xl font-bold tracking-widest text-sm flex items-center gap-2">
-        <Activity size={18} />
-        UPON ACTION | CÁLCULOS DA SESSÃO ATUAL
-      </div>
-      <Card className="p-0 border-none shadow-xl overflow-hidden rounded-b-3xl rounded-t-none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-900 text-white">
-                <th className="py-4 px-6 text-xs font-bold uppercase tracking-widest">Campo</th>
-                <th className="py-4 px-6 text-xs font-bold uppercase tracking-widest">Valor</th>
-                <th className="py-4 px-6 text-xs font-bold uppercase tracking-widest">Unidade</th>
-                <th className="py-4 px-6 text-xs font-bold uppercase tracking-widest">Status</th>
-                <th className="py-4 px-6 text-xs font-bold uppercase tracking-widest">Observação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Controle Section */}
-              <Row label="ID_Paciente" value={paciente?.id_paciente || '0'} status="Controle" />
-              <Row label="Jornada_ID" value={data.jornada_id} isInput field="jornada_id" type="text" status="Controle" />
-              <Row label="Data avaliação" value={data.data_avaliacao} isInput field="data_avaliacao" type="date" status="Controle" />
-              <Row label="Sessão nº" value={data.sessao_n} isInput field="sessao_n" status="Controle" />
-              <Row label="Fase" value={data.fase} isInput field="fase" type="text" status="Controle" />
-              <Row label="Qualidade do sinal" value={data.qualidade_sinal} isInput field="qualidade_sinal" type="text" status="Controle" />
-              <Row label="Queixa principal" value={data.queixa_principal} isInput field="queixa_principal" type="text" status="Controle" />
-
-              {/* Dados Brutos Pré */}
-              <Row label="FC pré" value={data.fc_pre} isInput field="fc_pre" unit="bpm" status="Dado bruto" />
-              <Row label="RMSSD pré" value={data.rmssd_pre} isInput field="rmssd_pre" unit="ms" status="Dado bruto" />
-              <Row label="SDNN pré" value={data.sdnn_pre} isInput field="sdnn_pre" unit="ms" status="Dado bruto" />
-              <Row label="pNN50 pré" value={data.pnn50_pre} isInput field="pnn50_pre" unit="%" status="Dado bruto" />
-              <Row label="LF/HF pré" value={data.lfhf_pre} isInput field="lfhf_pre" status="Dado bruto" />
-              <Row label="Total Power pré" value={data.tp_pre} isInput field="tp_pre" unit="ms²" status="Dado bruto" />
-
-              {/* Dados Brutos Pós */}
-              <Row label="FC pós" value={data.fc_pos} isInput field="fc_pos" unit="bpm" status="Dado bruto" />
-              <Row label="RMSSD pós" value={data.rmssd_pos} isInput field="rmssd_pos" unit="ms" status="Dado bruto" />
-              <Row label="SDNN pós" value={data.sdnn_pos} isInput field="sdnn_pos" unit="ms" status="Dado bruto" />
-              <Row label="pNN50 pós" value={data.pnn50_pos} isInput field="pnn50_pos" unit="%" status="Dado bruto" />
-              <Row label="LF/HF pós" value={data.lfhf_pos} isInput field="lfhf_pos" status="Dado bruto" />
-              <Row label="Total Power pós" value={data.tp_pos} isInput field="tp_pos" unit="ms²" status="Dado bruto" />
-
-              {/* Contexto Section */}
-              <Row label="Dor EVA" value={data.dor_eva} isInput field="dor_eva" unit="0-10" status="Contexto" />
-              <Row label="Mobilidade" value={data.mobilidade} isInput field="mobilidade" unit="0-10" status="Contexto" />
-              <Row label="Força" value={data.forca} isInput field="forca" unit="0-10" status="Contexto" />
-              <Row label="Controle motor" value={data.controle_motor} isInput field="controle_motor" unit="0-10" status="Contexto" />
-              <Row label="Gordura corporal" value={data.gordura} isInput field="gordura" unit="%" status="Contexto" />
-              <Row label="Água ICE" value={data.agua_ice} isInput field="agua_ice" unit="razão" status="Contexto" />
-              <Row label="Idade celular" value={data.idade_celular} isInput field="idade_celular" unit="anos" status="Contexto" />
-
-              {/* Cálculos Section */}
-              <Row label="Sexo cadastro" value={paciente?.sexo || '---'} status="Cadastro" />
-              <Row label="Data nasc cadastro" value={paciente?.data_nascimento || '---'} status="Cadastro" />
-              <Row label="Idade" value={idade} unit="anos" status="Cálculo" />
-              <Row label="RMSSD esperado" value={rmssd_esperado.toFixed(1)} unit="ms" status="Referência" />
-              
-              <Row label="Score RMSSD pré" value={score_rmssd_pre} unit="pts" status="0-100" />
-              <Row label="Score SDNN pré" value={score_sdnn_pre} unit="pts" status="0-100" />
-              <Row label="Score TP pré" value={score_tp_pre} unit="pts" status="0-100" />
-              <Row label="Score LF/HF pré" value={score_lfhf_pre} unit="pts" status="0-100" />
-              <Row label="Score pNN50 pré" value={score_pnn50_pre} unit="pts" status="0-100" />
-              <Row label="Score FC pré" value={score_fc_pre} unit="pts" status="0-100" />
-              <Row label="Penalidade pré" value={penalidade_pre} unit="pts" status=">=0" />
-              <Row label="SAUA pré" value={saua_pre} unit="pts" status="0-100" />
-              <Row label="Classificação pré" value={saua_pre > 60 ? 'Equilibrado' : 'Desequilibrado'} status="Classe" />
-
-              <Row label="Score RMSSD pós" value={score_rmssd_pos} unit="pts" status="0-100" />
-              <Row label="Score SDNN pós" value={score_sdnn_pos} unit="pts" status="0-100" />
-              <Row label="Score TP pós" value={score_tp_pos} unit="pts" status="0-100" />
-              <Row label="Score LF/HF pós" value={score_lfhf_pos} unit="pts" status="0-100" />
-              <Row label="Score pNN50 pós" value={score_pnn50_pos} unit="pts" status="0-100" />
-              <Row label="Score FC pós" value={score_fc_pos} unit="pts" status="0-100" />
-              <Row label="Penalidade pós" value={penalidade_pos} unit="pts" status=">=0" />
-              <Row label="SAUA pós" value={saua_pos} unit="pts" status="0-100" />
-              <Row label="Classificação pós" value={saua_pos > 60 ? 'Equilibrado' : 'Desequilibrado'} status="Classe" />
-              
-              {/* Longitudinal Section */}
-              <tr className="bg-slate-50">
-                <td colSpan={5} className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Indicadores Longitudinais</td>
-              </tr>
-              <Row label="DAS" value={das} unit="pts" status="Pós-Pré" />
-              <Row label="IRA" value={ira} unit="%" status="(pós-pré)/pré" />
-              <Row label="Score metabólico" value={score_metabolico} unit="pts" status="0-100" />
-              <Row label="Score locomotor" value={score_locomotor} unit="pts" status="0-100" />
-              <Row label="Score integrado" value={score_integrado} unit="pts" status="0-100" />
-              <Row label="Interpretação da sessão" value={data.interpretacao} isInput field="interpretacao" type="text" status="Texto" />
-            </tbody>
-          </table>
-        </div>
-        <div className="p-6 bg-slate-50 border-t border-slate-100">
-          <p className="text-xs text-slate-500 italic">
-            * Os indicadores longitudinais dependem de sessões anteriores já lançadas no histórico.
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 function ProntuarioView({ 
   pacienteId, 
   pacientes, 
@@ -2258,6 +2203,7 @@ function ProntuarioView({
 function EquipeView({ profissionais, user }: { profissionais: Profissional[], user: any }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProfissional, setEditingProfissional] = useState<Profissional | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     profissao: '',
@@ -2272,7 +2218,7 @@ function EquipeView({ profissionais, user }: { profissionais: Profissional[], us
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 500000) { // 500KB limit for base64 in Firestore
-        alert("A imagem é muito grande. Por favor, escolha uma imagem menor que 500KB.");
+        console.error("A imagem é muito grande. Por favor, escolha uma imagem menor que 500KB.");
         return;
       }
       const reader = new FileReader();
@@ -2309,34 +2255,41 @@ function EquipeView({ profissionais, user }: { profissionais: Profissional[], us
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    const path = 'profissionais';
     try {
       if (editingProfissional) {
-        await updateDoc(doc(db, 'profissionais', editingProfissional.id!), {
+        await updateDoc(doc(db, path, editingProfissional.id!), {
           ...formData,
         });
+        toast.success('Profissional atualizado!', {
+          description: `${formData.nome} foi atualizado com sucesso.`
+        });
       } else {
-        await addDoc(collection(db, 'profissionais'), {
+        await addDoc(collection(db, path), {
           ...formData,
           data_cadastro: new Date().toISOString(),
           uid: user.uid
+        });
+        toast.success('Profissional cadastrado!', {
+          description: `${formData.nome} foi adicionado à equipe.`
         });
       }
       setIsModalOpen(false);
       setEditingProfissional(null);
     } catch (error) {
-      console.error(error);
-      alert("Erro ao salvar profissional.");
+      handleFirestoreError(error, editingProfissional ? OperationType.UPDATE : OperationType.CREATE, path);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Deseja realmente excluir este profissional?")) {
-      try {
-        await deleteDoc(doc(db, 'profissionais', id));
-      } catch (error) {
-        console.error(error);
-        alert("Erro ao excluir profissional.");
-      }
+    const path = 'profissionais';
+    try {
+      await deleteDoc(doc(db, path, id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
     }
   };
 
@@ -2485,10 +2438,10 @@ function EquipeView({ profissionais, user }: { profissionais: Profissional[], us
                 </div>
 
                 <div className="pt-4 flex gap-3">
-                  <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsModalOpen(false)}>
+                  <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>
                     Cancelar
                   </Button>
-                  <Button type="submit" className="flex-1">
+                  <Button type="submit" className="flex-1" loading={isSubmitting}>
                     {editingProfissional ? 'Salvar Alterações' : 'Cadastrar Profissional'}
                   </Button>
                 </div>
@@ -2530,20 +2483,20 @@ function SettingsView({
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    const path = 'users_config';
     try {
       // In a real app, you'd use Firebase Admin or a backend to create the user
       // For this prototype, we'll store the intent in a 'users_config' collection
-      await addDoc(collection(db, 'users_config'), {
+      await addDoc(collection(db, path), {
         ...newUser,
         clinicId: user.uid,
         createdAt: new Date().toISOString()
       });
-      alert("Configuração de novo usuário salva! Nota: Para habilitar o login por e-mail/senha, é necessário ativar o provedor no Console do Firebase.");
+      console.log("Configuração de novo usuário salva! Nota: Para habilitar o login por e-mail/senha, é necessário ativar o provedor no Console do Firebase.");
       setIsUserModalOpen(false);
       setNewUser({ email: '', password: '', profissionalId: '', role: 'Profissional' });
     } catch (error) {
-      console.error(error);
-      alert("Erro ao salvar configuração de usuário.");
+      handleFirestoreError(error, OperationType.CREATE, path);
     }
   };
 
@@ -2712,6 +2665,7 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
   const [analyzing, setAnalyzing] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [savingLaudo, setSavingLaudo] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<Sessao>>({
     paciente_id: pacienteId || '',
     jornada_id: '',
@@ -2766,7 +2720,10 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
   }, [pacienteId]);
 
   const handleAnalyzeIA = async () => {
-    if (!formData.paciente_id) return alert("Selecione um paciente primeiro.");
+    if (!formData.paciente_id) {
+      console.error("Selecione um paciente primeiro.");
+      return;
+    }
     setAnalyzing(true);
     try {
       const results = await calculateAutomaticResults(formData);
@@ -2775,8 +2732,7 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
         resultados_automaticos: results
       }));
     } catch (error) {
-      console.error(error);
-      alert("Erro ao processar análise com IA.");
+      console.error("Erro ao processar análise com IA:", error);
     } finally {
       setAnalyzing(false);
     }
@@ -2867,20 +2823,28 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
   };
 
   const handleSaveLaudo = async () => {
-    if (!formData.paciente_id) return alert("Selecione um paciente");
-    if (!(formData.resultados_automaticos as any)?.analise_texto) return alert("Gere a análise IA primeiro");
+    if (!formData.paciente_id) {
+      toast.error("Selecione um paciente");
+      return;
+    }
+    if (!(formData.resultados_automaticos as any)?.analise_texto) {
+      toast.error("Gere a análise IA primeiro");
+      return;
+    }
 
     setSavingLaudo(true);
+    const pathSessoes = 'sessoes';
+    const pathLaudos = 'laudos';
     try {
       // 1. Save the session first to get the ID
-      const sessionRef = await addDoc(collection(db, 'sessoes'), {
+      const sessionRef = await addDoc(collection(db, pathSessoes), {
         ...formData,
         uid: user.uid,
         data_sessao: new Date(formData.data_sessao!).toISOString(),
       });
 
       // 2. Save the laudo
-      await addDoc(collection(db, 'laudos'), {
+      await addDoc(collection(db, pathLaudos), {
         sessao_id: sessionRef.id,
         paciente_id: formData.paciente_id,
         conteudo: (formData.resultados_automaticos as any).analise_texto,
@@ -2888,11 +2852,12 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
         uid: user.uid
       });
 
-      alert("Sessão e Laudo salvos com sucesso no prontuário!");
+      toast.success('Sessão e Laudo salvos!', {
+        description: 'Os dados foram registrados no prontuário do paciente.'
+      });
       setShowReport(false);
     } catch (error) {
-      console.error(error);
-      alert("Erro ao salvar laudo.");
+      handleFirestoreError(error, OperationType.CREATE, pathLaudos);
     } finally {
       setSavingLaudo(false);
     }
@@ -2900,18 +2865,24 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.paciente_id) return alert("Selecione um paciente");
+    if (!formData.paciente_id) {
+      toast.error("Selecione um paciente");
+      return;
+    }
     
+    setIsSubmitting(true);
+    const path = 'sessoes';
     try {
-      await addDoc(collection(db, 'sessoes'), {
+      await addDoc(collection(db, path), {
         ...formData,
         uid: user.uid,
         data_sessao: new Date(formData.data_sessao!).toISOString(),
       });
-      alert("Sessão salva com sucesso na ficha do paciente!");
+      toast.success('Sessão salva com sucesso!');
     } catch (error) {
-      console.error(error);
-      alert("Erro ao salvar sessão.");
+      handleFirestoreError(error, OperationType.CREATE, path);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -3071,7 +3042,7 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
 
           <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={() => setShowReport(true)} disabled={!formData.resultados_automaticos?.classificacao || formData.resultados_automaticos.classificacao === '#VALOR!'}>Visualizar Relatório Completo</Button>
-            <Button type="submit" className="px-8 py-3 text-lg">Salvar na Ficha do Paciente</Button>
+            <Button type="submit" className="px-8 py-3 text-lg" loading={isSubmitting}>Salvar na Ficha do Paciente</Button>
           </div>
         </div>
 
