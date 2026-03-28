@@ -31,8 +31,16 @@ import {
   ClipboardList,
   History,
   Menu,
-  X
+  X,
+  Flag,
+  MousePointer2,
+  Layers,
+  Zap,
+  Moon,
+  Sun,
+  Box
 } from 'lucide-react';
+import { BioimpedanceDashboard } from './components/BioimpedanceDashboard';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LineChart, 
@@ -276,6 +284,137 @@ const Select = ({ label, options, ...props }: any) => (
   </div>
 );
 
+const PatientSearchSelect = ({ label, pacientes, value, onChange, required, showAllOption = false, dark = false }: { label: string, pacientes: Paciente[], value: string, onChange: (val: string) => void, required?: boolean, showAllOption?: boolean, dark?: boolean }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredPacientes, setFilteredPacientes] = useState<Paciente[]>([]);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  const selectedPaciente = pacientes.find(p => p.id === value);
+  const isAllSelected = showAllOption && value === 'all';
+
+  useEffect(() => {
+    let list = [...pacientes];
+    if (searchTerm.trim() === '') {
+      setFilteredPacientes(list.slice(0, 10)); 
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = list.filter(p => 
+        p.nome.toLowerCase().includes(term) || 
+        p.id_paciente.toLowerCase().includes(term)
+      );
+      setFilteredPacientes(filtered);
+    }
+  }, [searchTerm, pacientes]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="space-y-1.5 w-full relative" ref={dropdownRef}>
+      {label && <label className={cn("text-sm font-medium", dark ? "text-slate-400" : "text-slate-700")}>{label}{required && <span className="text-red-500 ml-1">*</span>}</label>}
+      <div 
+        className={cn(
+          "w-full px-4 py-2 rounded-lg border flex items-center justify-between cursor-pointer transition-all",
+          dark ? "bg-black border-slate-800 text-white" : "bg-white border-slate-200 text-slate-900",
+          isOpen ? "ring-2 ring-indigo-500 border-indigo-500" : ""
+        )}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={cn("truncate", (!selectedPaciente && !isAllSelected) ? (dark ? "text-slate-600" : "text-slate-400") : (dark ? "text-white font-black" : "text-slate-900 font-medium"))}>
+          {isAllSelected ? 'Todos os Pacientes' : (selectedPaciente ? `${selectedPaciente.nome} (${selectedPaciente.id_paciente})` : 'Selecione ou busque...')}
+        </span>
+        <Search size={16} className={cn("shrink-0 ml-2", dark ? "text-indigo-500" : "text-slate-400")} />
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className={cn(
+              "absolute z-50 left-0 right-0 mt-2 rounded-xl shadow-2xl border overflow-hidden",
+              dark ? "bg-black border-slate-800" : "bg-white border-slate-100"
+            )}
+          >
+            <div className={cn("p-2 border-b", dark ? "border-slate-800" : "border-slate-50")}>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Buscar por nome ou ID..."
+                  className={cn(
+                    "w-full pl-9 pr-4 py-2 text-sm rounded-lg border-none focus:ring-2 focus:ring-indigo-500 outline-none",
+                    dark ? "bg-slate-900 text-white placeholder:text-slate-600" : "bg-slate-50 text-slate-900"
+                  )}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+              {showAllOption && !searchTerm && (
+                <button
+                  type="button"
+                  className={cn(
+                    "w-full px-4 py-3 text-left transition-colors border-b",
+                    dark ? "hover:bg-slate-900 border-slate-800" : "hover:bg-slate-50 border-slate-50",
+                    value === 'all' ? (dark ? "bg-indigo-900/20" : "bg-indigo-50") : ""
+                  )}
+                  onClick={() => {
+                    onChange('all');
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                >
+                  <span className={cn("text-sm font-bold", dark ? "text-indigo-400" : "text-indigo-600")}>Todos os Pacientes</span>
+                </button>
+              )}
+              {filteredPacientes.length > 0 ? (
+                filteredPacientes.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={cn(
+                      "w-full px-4 py-3 text-left transition-colors border-b last:border-none",
+                      dark ? "hover:bg-slate-900 border-slate-800 text-slate-300" : "hover:bg-slate-50 border-slate-50 text-slate-700",
+                      value === p.id ? (dark ? "bg-indigo-900/20 text-white" : "bg-indigo-50 text-indigo-700") : ""
+                    )}
+                    onClick={() => {
+                      onChange(p.id!);
+                      setIsOpen(false);
+                      setSearchTerm('');
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span className={cn("text-sm font-bold", value === p.id ? (dark ? "text-indigo-400" : "text-indigo-600") : (dark ? "text-white" : "text-slate-900"))}>{p.nome}</span>
+                      <span className="text-[10px] opacity-60 uppercase tracking-wider">{p.id_paciente}</span>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className={cn("px-4 py-8 text-center", dark ? "text-slate-600" : "text-slate-400")}>
+                  <p className="text-sm">Nenhum paciente encontrado</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -289,6 +428,11 @@ export default function App() {
   const [laudos, setLaudos] = useState<Laudo[]>([]);
   const [selectedPacienteId, setSelectedPacienteId] = useState<string | null>(null);
   const [theme, setTheme] = useState('theme-indigo');
+  const [hoverEffects, setHoverEffects] = useState(true);
+  const [blurredBackground, setBlurredBackground] = useState(true);
+  const [microInteractions, setMicroInteractions] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [glassEffect, setGlassEffect] = useState(true);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loginMode, setLoginMode] = useState<'login' | 'signup'>('login');
@@ -296,14 +440,23 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
+  const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'connecting'>('connecting');
+
   // Auth & Connection Test
   useEffect(() => {
     const testConnection = async () => {
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
+        setDbStatus('connected');
       } catch (error) {
         if (error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration.");
+          setDbStatus('error');
+          toast.error("Erro de Conexão", {
+            description: "Não foi possível conectar ao banco de dados. Verifique sua internet ou a configuração do Firebase."
+          });
+        } else {
+          // If it's just a permission error or "not found", it's still "connected" to the service
+          setDbStatus('connected');
         }
       }
     };
@@ -342,9 +495,12 @@ export default function App() {
       setPacientes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Paciente)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'pacientes'));
 
-    const qSessoes = query(collection(db, 'sessoes'), where('uid', '==', user.uid), orderBy('data_sessao', 'desc'));
+    const qSessoes = query(collection(db, 'sessoes'), where('uid', '==', user.uid));
     const unsubSessoes = onSnapshot(qSessoes, (snap) => {
-      setSessoes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Sessao)));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Sessao));
+      // Ordenação client-side para evitar a necessidade de índice composto no Firestore
+      data.sort((a, b) => new Date(b.data_sessao).getTime() - new Date(a.data_sessao).getTime());
+      setSessoes(data);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'sessoes'));
 
     const qRefs = query(collection(db, 'referencias'));
@@ -377,6 +533,61 @@ export default function App() {
     };
   }, [user]);
 
+  const downloadSavedLaudo = (laudo: Laudo) => {
+    const doc = new jsPDF();
+    const paciente = pacientes.find(p => p.id === laudo.paciente_id);
+    const profissional = profissionais.find(p => p.id === laudo.profissional_id);
+    const sessao = sessoes.find(s => s.id === laudo.sessao_id);
+
+    doc.setFontSize(22);
+    doc.setTextColor(79, 70, 229); // Indigo-600
+    doc.text("Laudo Clínico NeuroFlow", 20, 20);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Paciente: ${paciente?.nome || 'N/A'}`, 20, 35);
+    doc.text(`Data do Laudo: ${formatDate(laudo.data_geracao)}`, 20, 42);
+    if (sessao) {
+      doc.text(`Referente à Sessão nº: ${sessao.sessao_n} (${formatDate(sessao.data_sessao)})`, 20, 49);
+    }
+    
+    doc.setDrawColor(200);
+    doc.line(20, 55, 190, 55);
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Conteúdo do Laudo", 20, 65);
+    
+    doc.setFontSize(10);
+    const splitText = doc.splitTextToSize(laudo.conteudo, 170);
+    doc.text(splitText, 20, 75);
+    
+    let y = 75 + (splitText.length * 5) + 20;
+
+    if (profissional) {
+      if (y > 250) {
+        doc.addPage();
+        y = 30;
+      }
+      
+      doc.setDrawColor(150);
+      doc.line(60, y, 150, y);
+      y += 5;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(profissional.nome, 105, y, { align: "center" });
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`${profissional.profissao} - ${profissional.conselho}: ${profissional.registro}`, 105, y, { align: "center" });
+      y += 5;
+      doc.text(`Data de emissão: ${new Date().toLocaleDateString('pt-BR')}`, 105, y, { align: "center" });
+    }
+    
+    const fileNameDate = formatDate(laudo.data_geracao).replace(/\//g, '-').replace(/:/g, '-').replace(/ /g, '_');
+    doc.save(`laudo-${paciente?.nome || 'paciente'}-${fileNameDate}.pdf`);
+  };
+
   if (loading) return (
     <div className="h-screen w-full flex items-center justify-center bg-slate-50">
       <div className="flex flex-col items-center gap-4">
@@ -388,7 +599,15 @@ export default function App() {
 
   if (!user) return (
     <ErrorBoundary>
-      <div className={cn("h-screen w-full flex items-center justify-center relative overflow-hidden", theme)} style={{ fontFamily: 'var(--font-family)' }}>
+      <div className={cn(
+        "h-screen w-full flex items-center justify-center relative overflow-hidden", 
+        theme,
+        darkMode && "dark",
+        hoverEffects && "hover-effects-enabled",
+        blurredBackground && "blurred-bg-enabled",
+        microInteractions && "micro-interactions-enabled",
+        glassEffect && "glass-effect-enabled"
+      )} style={{ fontFamily: 'var(--font-family)' }}>
       {/* Background Image with Overlay */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105 hover:scale-100"
@@ -486,7 +705,15 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className={cn("h-screen w-full flex bg-slate-50 overflow-hidden relative", theme)} style={{ fontFamily: 'var(--font-family)' }}>
+      <div className={cn(
+        "h-screen w-full flex bg-slate-50 overflow-hidden relative", 
+        theme,
+        darkMode && "dark",
+        hoverEffects && "hover-effects-enabled",
+        blurredBackground && "blurred-bg-enabled",
+        microInteractions && "micro-interactions-enabled",
+        glassEffect && "glass-effect-enabled"
+      )} style={{ fontFamily: 'var(--font-family)' }}>
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 z-30 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
@@ -565,6 +792,15 @@ export default function App() {
         </nav>
 
         <div className="mt-auto pt-4 border-t border-slate-200/50">
+          <div className="flex items-center gap-2 px-4 py-2 mb-2">
+            <div className={cn(
+              "w-2 h-2 rounded-full animate-pulse",
+              dbStatus === 'connected' ? "bg-emerald-500" : dbStatus === 'error' ? "bg-red-500" : "bg-amber-500"
+            )} />
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              {dbStatus === 'connected' ? "Banco Conectado" : dbStatus === 'error' ? "Erro de Conexão" : "Conectando..."}
+            </span>
+          </div>
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-3 border border-white/40 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <div className="relative">
@@ -597,6 +833,8 @@ export default function App() {
               <DashboardView 
                 pacientes={pacientes} 
                 sessoes={sessoes} 
+                profissionais={profissionais}
+                user={user}
                 onNewSession={(p) => {
                   setSelectedPacienteId(p.id!);
                   setActiveTab('nova_sessao');
@@ -620,20 +858,42 @@ export default function App() {
                 sessoes={sessoes}
                 jornadas={jornadas}
                 laudos={laudos}
+                profissionais={profissionais}
+                onDownloadLaudo={downloadSavedLaudo}
                 onBack={() => setActiveTab('pacientes')}
               />
             )}
-            {activeTab === 'nova_sessao' && <FormularioSessaoView pacientes={pacientes} user={user} pacienteId={selectedPacienteId || undefined} />}
-            {activeTab === 'sessoes' && <SessoesView sessoes={sessoes} pacientes={pacientes} user={user} references={referencias} />}
+            {activeTab === 'nova_sessao' && <FormularioSessaoView pacientes={pacientes} jornadas={jornadas} profissionais={profissionais} user={user} pacienteId={selectedPacienteId || undefined} />}
+            {activeTab === 'sessoes' && (
+              <SessoesView 
+                sessoes={sessoes} 
+                pacientes={pacientes} 
+                user={user} 
+                references={referencias} 
+                laudos={laudos}
+                onDownloadLaudo={downloadSavedLaudo}
+              />
+            )}
+            {activeTab === 'jornadas' && <JornadasView pacientes={pacientes} jornadas={jornadas} sessoes={sessoes} user={user} />}
             {activeTab === 'referencias' && <ReferenciasView referencias={referencias} />}
-            {activeTab === 'relatorios' && <RelatoriosView pacientes={pacientes} sessoes={sessoes} />}
+            {activeTab === 'relatorios' && <RelatoriosView pacientes={pacientes} sessoes={sessoes} profissionais={profissionais} user={user} />}
             {activeTab === 'equipe' && <EquipeView profissionais={profissionais} user={user} />}
             {activeTab === 'configuracoes' && (
               <SettingsView 
                 theme={theme} 
-                setTheme={setTheme} 
-                profissionais={profissionais} 
-                user={user} 
+                setTheme={setTheme}
+                hoverEffects={hoverEffects}
+                setHoverEffects={setHoverEffects}
+                blurredBackground={blurredBackground}
+                setBlurredBackground={setBlurredBackground}
+                microInteractions={microInteractions}
+                setMicroInteractions={setMicroInteractions}
+                darkMode={darkMode}
+                setDarkMode={setDarkMode}
+                glassEffect={glassEffect}
+                setGlassEffect={setGlassEffect}
+                profissionais={profissionais}
+                user={user}
               />
             )}
             {activeTab === 'instrucoes' && <InstrucoesView />}
@@ -756,15 +1016,42 @@ const Speedometer = ({ value }: { value: number }) => {
   );
 };
 
-function DashboardView({ pacientes, sessoes, onNewSession }: { pacientes: Paciente[], sessoes: Sessao[], onNewSession: (p: Paciente) => void }) {
+function DashboardView({ 
+  pacientes, 
+  sessoes, 
+  profissionais,
+  user,
+  onNewSession 
+}: { 
+  pacientes: Paciente[], 
+  sessoes: Sessao[], 
+  profissionais: Profissional[],
+  user: any,
+  onNewSession: (p: Paciente) => void 
+}) {
   const [selectedPacienteId, setSelectedPacienteId] = useState<string>('');
+  const [showReportOptions, setShowReportOptions] = useState(false);
+  const [profissionalId, setProfissionalId] = useState<string>('');
+  const [saving, setSaving] = useState(false);
 
   const filteredSessoes = (selectedPacienteId 
     ? sessoes.filter(s => s.paciente_id === selectedPacienteId)
     : sessoes).sort((a, b) => new Date(b.data_sessao).getTime() - new Date(a.data_sessao).getTime());
 
   const selectedPaciente = pacientes.find(p => p.id === selectedPacienteId);
+  const [selectedSessaoId, setSelectedSessaoId] = useState<string>('');
+
   const latestSessao = filteredSessoes[0];
+  const latestBioSessao = filteredSessoes.find(s => 
+    (s.contexto_clinico?.massa_gorda || 0) > 0 || 
+    (s.contexto_clinico?.percentual_gordura || 0) > 0 ||
+    (s.contexto_clinico?.angulo_fase || 0) > 0
+  ) || latestSessao;
+
+  const currentSessao = selectedSessaoId 
+    ? filteredSessoes.find(s => s.id === selectedSessaoId) || latestBioSessao
+    : latestBioSessao;
+
   const firstSessao = filteredSessoes[filteredSessoes.length - 1];
   const previousSessao = filteredSessoes[1];
 
@@ -780,68 +1067,73 @@ function DashboardView({ pacientes, sessoes, onNewSession }: { pacientes: Pacien
   };
 
   const getSauaColor = (score: number) => {
-    if (score >= 70) return "text-blue-600";
-    if (score >= 40) return "text-emerald-600";
-    if (score >= 20) return "text-amber-600";
-    return "text-red-600";
+    if (score >= 70) return "text-indigo-500";
+    if (score >= 40) return "text-emerald-500";
+    if (score >= 20) return "text-amber-500";
+    return "text-red-500";
   };
 
   if (!selectedPacienteId) {
     return (
-      <div className="space-y-8">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Dashboard Clínico</h1>
-            <p className="text-slate-500 text-sm md:text-base">Selecione um paciente para visualizar a análise detalhada.</p>
+      <div className="space-y-8 bg-black -m-8 p-8 min-h-screen text-white font-sans">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-black p-8 rounded-3xl border border-slate-800 shadow-2xl backdrop-blur-md bg-black/80 sticky top-0 z-10">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Dashboard <span className="text-indigo-500">Clínico</span></h1>
+            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Selecione um paciente para visualizar a análise detalhada.</p>
           </div>
-          <div className="w-full md:w-72">
-            <Select 
-              label="Buscar Paciente"
-              value={selectedPacienteId}
-              onChange={(e: any) => setSelectedPacienteId(e.target.value)}
-              options={[
-                { value: '', label: 'Selecione um Paciente...' },
-                ...pacientes.map(p => ({ value: p.id, label: `${p.nome} (ID: ${p.id_paciente})` }))
-              ]}
-            />
+          <div className="w-full md:w-80">
+            <div className="bg-slate-900/50 p-1 rounded-xl border border-slate-800">
+              <PatientSearchSelect 
+                label=""
+                pacientes={pacientes}
+                value={selectedPacienteId}
+                onChange={(val: string) => setSelectedPacienteId(val)}
+                dark={true}
+              />
+            </div>
           </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { label: "Total Pacientes", value: pacientes.length, icon: Users, color: "bg-blue-500" },
-            { label: "Sessões Realizadas", value: sessoes.length, icon: Activity, color: "bg-indigo-500" },
-            { label: "Média de Idade", value: pacientes.length ? Math.round(pacientes.reduce((acc, p) => acc + calculateAge(p.data_nascimento), 0) / pacientes.length) : 0, icon: Clock, color: "bg-emerald-500" },
-            { label: "Alertas Ativos", value: 3, icon: AlertCircle, color: "bg-amber-500" },
+            { label: "Total Pacientes", value: pacientes.length, icon: Users, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+            { label: "Sessões Realizadas", value: sessoes.length, icon: Activity, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+            { label: "Média de Idade", value: pacientes.length ? Math.round(pacientes.reduce((acc, p) => acc + calculateAge(p.data_nascimento), 0) / pacientes.length) : 0, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+            { label: "Alertas Ativos", value: 3, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
           ].map((stat, i) => (
-            <Card key={i} className="relative overflow-hidden">
-              <div className={cn("absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-10", stat.color)} />
-              <div className="flex items-center gap-4">
-                <div className={cn("p-3 rounded-xl text-white", stat.color)}>
-                  <stat.icon size={24} />
+            <Card key={i} className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8 relative overflow-hidden group hover:border-slate-700 transition-all">
+              <div className={cn("absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-5 blur-2xl transition-all group-hover:opacity-10", stat.bg)} />
+              <div className="flex items-center gap-6">
+                <div className={cn("p-4 rounded-2xl border border-white/5", stat.bg, stat.color)}>
+                  <stat.icon size={28} />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-                  <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{stat.label}</p>
+                  <p className="text-4xl font-black text-white tracking-tighter">{stat.value}</p>
                 </div>
               </div>
             </Card>
           ))}
         </div>
 
-        <Card title="Distribuição de Pacientes por Sexo">
-          <div className="h-[300px] w-full">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10">Distribuição de Pacientes por Sexo</h3>
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={[
                 { name: 'Masculino', count: pacientes.filter(p => p.sexo === 'M').length },
                 { name: 'Feminino', count: pacientes.filter(p => p.sexo === 'F').length },
                 { name: 'Outros', count: pacientes.filter(p => p.sexo === 'O').length },
               ]}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip cursor={{fill: '#f8fafc'}} />
-                <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.5} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
+                <Tooltip 
+                  cursor={{fill: '#ffffff05'}}
+                  contentStyle={{ backgroundColor: '#000', borderRadius: '16px', border: '1px solid #1e293b' }}
+                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Bar dataKey="count" fill="#6366f1" radius={[12, 12, 0, 0]} barSize={60} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -858,6 +1150,99 @@ function DashboardView({ pacientes, sessoes, onNewSession }: { pacientes: Pacien
   const isc = latestSessao?.resultados_automaticos?.isc ? parseFloat(latestSessao.resultados_automaticos.isc) : 0;
   const ir = latestSessao?.resultados_automaticos?.ir ? parseFloat(latestSessao.resultados_automaticos.ir) : 0;
 
+  const handleDownloadPDF = () => {
+    if (!selectedPaciente) return;
+    const doc = new jsPDF();
+    const profissional = profissionais.find(p => p.id === profissionalId);
+
+    doc.setFontSize(22);
+    doc.setTextColor(79, 70, 229); // Indigo-600
+    doc.text("Relatório de Dashboard NeuroFlow", 20, 20);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Paciente: ${selectedPaciente.nome}`, 20, 35);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 42);
+    doc.text(`Idade: ${calculateAge(selectedPaciente.data_nascimento)} anos`, 20, 49);
+    
+    doc.setDrawColor(200);
+    doc.line(20, 55, 190, 55);
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Resumo do Estado Atual", 20, 65);
+    
+    doc.setFontSize(10);
+    doc.text(`SAUA Atual: ${sauaAtual}`, 20, 75);
+    doc.text(`Classificação: ${latestSessao?.resultados_automaticos?.classificacao || 'N/A'}`, 20, 82);
+    doc.text(`RMSSD: ${latestSessao?.vfc_pre_pos?.rmssd?.pos || 0} ms`, 20, 89);
+    doc.text(`FC Média: ${latestSessao?.vfc_pre_pos?.fc_media?.pos || 0} bpm`, 20, 96);
+    doc.text(`Total Power: ${latestSessao?.vfc_pre_pos?.total_power?.pos || 0} ms²`, 20, 103);
+    
+    doc.text("Status Integrado:", 20, 115);
+    const splitStatus = doc.splitTextToSize(latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em análise.', 170);
+    doc.text(splitStatus, 20, 122);
+    
+    let y = 122 + (splitStatus.length * 5) + 15;
+    
+    if (profissional) {
+      if (y > 250) {
+        doc.addPage();
+        y = 30;
+      }
+      doc.setDrawColor(150);
+      doc.line(60, y, 150, y);
+      y += 5;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(profissional.nome, 105, y, { align: "center" });
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`${profissional.profissao} - ${profissional.conselho}: ${profissional.registro}`, 105, y, { align: "center" });
+      y += 5;
+      doc.text(`Data de emissão: ${new Date().toLocaleDateString('pt-BR')}`, 105, y, { align: "center" });
+    }
+
+    doc.save(`relatorio-dashboard-${selectedPaciente.nome}-${new Date().toISOString().split('T')[0]}.pdf`);
+    setShowReportOptions(false);
+  };
+
+  const handleSaveToRecord = async () => {
+    if (!selectedPaciente) return;
+    setSaving(true);
+    try {
+      const content = `RELATÓRIO DE DASHBOARD - ${new Date().toLocaleDateString('pt-BR')}
+      
+SAUA Atual: ${sauaAtual}
+Classificação: ${latestSessao?.resultados_automaticos?.classificacao || 'N/A'}
+RMSSD: ${latestSessao?.vfc_pre_pos?.rmssd?.pos || 0} ms
+FC Média: ${latestSessao?.vfc_pre_pos?.fc_media?.pos || 0} bpm
+Total Power: ${latestSessao?.vfc_pre_pos?.total_power?.pos || 0} ms²
+
+Status Integrado:
+${latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em análise.'}`;
+
+      await addDoc(collection(db, 'laudos'), {
+        paciente_id: selectedPaciente.id,
+        paciente_nome: selectedPaciente.nome,
+        profissional_id: profissionalId || null,
+        data_geracao: new Date().toISOString(),
+        tipo: 'Relatório de Dashboard',
+        conteudo: content,
+        uid: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      toast.success("Relatório salvo no prontuário e histórico!");
+      setShowReportOptions(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao salvar relatório");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const chartData = filteredSessoes.slice(0, 10).reverse().map(s => ({
     date: new Date(s.data_sessao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
     saua: parseInt(s.resultados_automaticos?.saua_pos || "0"),
@@ -866,105 +1251,133 @@ function DashboardView({ pacientes, sessoes, onNewSession }: { pacientes: Pacien
   }));
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-8 pb-12 bg-black -m-8 p-8 min-h-screen text-white font-sans">
       {/* 1. HEADER SUPERIOR */}
-      <header className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sticky top-0 z-10">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSelectedPacienteId('')} className="p-1 hover:bg-slate-100 rounded-full transition-colors">
-              <ArrowLeft size={20} className="text-slate-500" />
+      <header className="bg-black p-8 rounded-3xl border border-slate-800 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sticky top-0 z-10 backdrop-blur-md bg-black/80">
+        <div className="space-y-2">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSelectedPacienteId('')} className="p-2 hover:bg-slate-800 rounded-full transition-all border border-transparent hover:border-slate-700">
+              <ArrowLeft size={20} className="text-slate-400" />
             </button>
-            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">{selectedPaciente.nome}</h1>
+            <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{selectedPaciente.nome}</h1>
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 font-medium">
-            <span>Idade: {calculateAge(selectedPaciente.data_nascimento)} anos</span>
-            <span className="text-slate-300">|</span>
-            <span>Data: {new Date().toLocaleDateString('pt-BR')}</span>
-            <span className="text-slate-300">|</span>
-            <span>Sessão nº: {filteredSessoes.length}</span>
-            <span className="text-slate-300">|</span>
-            <span>Jornada: Ativa (Início: {new Date(selectedPaciente.data_criacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})</span>
-            <span className="text-slate-300">|</span>
-            <span>Sessões: {filteredSessoes.length}</span>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-indigo-500"></span>Idade: {calculateAge(selectedPaciente.data_nascimento)} anos</span>
+            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-emerald-500"></span>Data: {new Date().toLocaleDateString('pt-BR')}</span>
+            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-amber-500"></span>Sessão nº: {filteredSessoes.length}</span>
+            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-indigo-500"></span>Jornada: Ativa</span>
           </div>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <Button onClick={() => onNewSession(selectedPaciente)} icon={Plus} className="flex-1 md:flex-none">Nova Sessão</Button>
-          <Button variant="secondary" icon={FileDown} className="flex-1 md:flex-none">Relatório</Button>
+        <div className="flex gap-3 w-full md:w-auto relative">
+          <Button onClick={() => onNewSession(selectedPaciente)} icon={Plus} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 border-none rounded-xl font-bold uppercase tracking-wider text-xs px-6">Nova Sessão</Button>
+          <div className="relative flex-1 md:flex-none">
+            <Button variant="secondary" icon={FileDown} className="w-full bg-slate-900 text-white border-slate-800 hover:bg-slate-800 rounded-xl font-bold uppercase tracking-wider text-xs px-6" onClick={() => setShowReportOptions(!showReportOptions)}>Relatório</Button>
+            
+            <AnimatePresence>
+              {showReportOptions && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute right-0 top-full mt-2 w-72 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-4 z-20 space-y-4"
+                >
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Profissional Responsável</label>
+                    <select 
+                      value={profissionalId}
+                      onChange={(e: any) => setProfissionalId(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-700 bg-black text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    >
+                      <option value="">Selecione o Profissional...</option>
+                      {profissionais.map(p => (
+                        <option key={p.id} value={p.id}>{p.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button variant="outline" icon={Download} onClick={handleDownloadPDF} className="justify-start text-xs h-9 border-slate-700 text-slate-300 hover:bg-slate-800">Baixar em PDF</Button>
+                    <Button variant="outline" icon={ClipboardList} onClick={handleSaveToRecord} disabled={saving} className="justify-start text-xs h-9 border-slate-700 text-slate-300 hover:bg-slate-800">
+                      {saving ? 'Salvando...' : 'Salvar no Prontuário'}
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* 2. BLOCO PRINCIPAL — ESTADO ATUAL */}
-        <Card className="border-t-4 border-t-blue-500">
-          <div className="space-y-6 text-center py-2">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">SAUA ATUAL</h3>
-            <div className="space-y-1">
-              <p className={cn("text-7xl font-black tracking-tighter", getSauaColor(sauaAtual))}>{sauaAtual}</p>
-              <p className="text-lg font-bold text-slate-900 uppercase tracking-wider">{latestSessao?.resultados_automaticos?.classificacao || 'N/A'}</p>
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <div className="space-y-8 text-center">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">SAUA ATUAL</h3>
+            <div className="space-y-2">
+              <p className={cn("text-8xl font-black tracking-tighter leading-none", getSauaColor(sauaAtual))}>{sauaAtual}</p>
+              <p className="text-sm font-bold text-white uppercase tracking-widest">{latestSessao?.resultados_automaticos?.classificacao || 'N/A'}</p>
             </div>
-            <div className="flex justify-center gap-6 text-sm font-medium text-slate-500">
-              <div className="text-center">
-                <p className="text-slate-400 text-[10px] uppercase">RMSSD</p>
-                <p className="text-slate-900">{latestSessao?.vfc_pre_pos?.rmssd?.pos || 0} ms</p>
+            <div className="flex justify-center gap-8 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              <div className="text-center space-y-1">
+                <p>RMSSD</p>
+                <p className="text-white text-lg font-black">{latestSessao?.vfc_pre_pos?.rmssd?.pos || 0}</p>
               </div>
-              <div className="text-center">
-                <p className="text-slate-400 text-[10px] uppercase">FC</p>
-                <p className="text-slate-900">{latestSessao?.vfc_pre_pos?.fc_media?.pos || 0} bpm</p>
+              <div className="text-center space-y-1">
+                <p>FC</p>
+                <p className="text-white text-lg font-black">{latestSessao?.vfc_pre_pos?.fc_media?.pos || 0}</p>
               </div>
-              <div className="text-center">
-                <p className="text-slate-400 text-[10px] uppercase">TP</p>
-                <p className="text-slate-900">{latestSessao?.vfc_pre_pos?.total_power?.pos || 0} ms²</p>
+              <div className="text-center space-y-1">
+                <p>TP</p>
+                <p className="text-white text-lg font-black">{latestSessao?.vfc_pre_pos?.total_power?.pos || 0}</p>
               </div>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl">
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                <span className="font-bold text-slate-900 uppercase">STATUS:</span> {latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em análise.'}
+            <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800/50">
+              <p className="text-[10px] text-slate-400 leading-relaxed font-bold uppercase tracking-wider">
+                <span className="text-indigo-500">STATUS:</span> {latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em análise.'}
               </p>
             </div>
           </div>
         </Card>
 
         {/* 3. RESPOSTA AGUDA DA SESSÃO */}
-        <Card className="border-t-4 border-t-emerald-500">
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">RESPOSTA DA SESSÃO</h3>
-            <div className="space-y-4">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">RESPOSTA DA SESSÃO</h3>
+            <div className="space-y-6">
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">SAUA</p>
-                  <p className="text-2xl font-black text-slate-900">{sauaPre} → {sauaAtual}</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">SAUA</p>
+                  <p className="text-3xl font-black text-white tracking-tighter">{sauaPre} → {sauaAtual}</p>
                 </div>
                 <div className="text-right">
-                  <p className={cn("text-lg font-bold", das >= 0 ? "text-emerald-600" : "text-red-600")}>
+                  <p className={cn("text-2xl font-black tracking-tighter", das >= 0 ? "text-emerald-500" : "text-red-500")}>
                     DAS: {das >= 0 ? '+' : ''}{das}
                   </p>
-                  <p className="text-[10px] text-slate-400 font-medium">({das >= 0 ? 'Resposta positiva' : 'Resposta negativa'})</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{das >= 0 ? 'Positiva' : 'Negativa'}</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-4 py-2 border-y border-slate-50">
-                <div>
-                  <p className="text-[9px] text-slate-400 uppercase font-bold">RMSSD</p>
-                  <p className="text-sm font-bold text-slate-700">{latestSessao?.vfc_pre_pos?.rmssd?.pre} → {latestSessao?.vfc_pre_pos?.rmssd?.pos}</p>
+              <div className="grid grid-cols-3 gap-4 py-6 border-y border-slate-900">
+                <div className="space-y-1">
+                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">RMSSD</p>
+                  <p className="text-sm font-black text-white">{latestSessao?.vfc_pre_pos?.rmssd?.pre} → {latestSessao?.vfc_pre_pos?.rmssd?.pos}</p>
                 </div>
-                <div>
-                  <p className="text-[9px] text-slate-400 uppercase font-bold">SDNN</p>
-                  <p className="text-sm font-bold text-slate-700">{latestSessao?.vfc_pre_pos?.sdnn?.pre} → {latestSessao?.vfc_pre_pos?.sdnn?.pos}</p>
+                <div className="space-y-1">
+                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">SDNN</p>
+                  <p className="text-sm font-black text-white">{latestSessao?.vfc_pre_pos?.sdnn?.pre} → {latestSessao?.vfc_pre_pos?.sdnn?.pos}</p>
                 </div>
-                <div>
-                  <p className="text-[9px] text-slate-400 uppercase font-bold">TP</p>
-                  <p className="text-sm font-bold text-slate-700">{latestSessao?.vfc_pre_pos?.total_power?.pre} → {latestSessao?.vfc_pre_pos?.total_power?.pos}</p>
+                <div className="space-y-1">
+                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">TP</p>
+                  <p className="text-sm font-black text-white">{latestSessao?.vfc_pre_pos?.total_power?.pre} → {latestSessao?.vfc_pre_pos?.total_power?.pos}</p>
                 </div>
               </div>
 
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">IRA</p>
-                  <p className="text-lg font-bold text-slate-900">{ira >= 0 ? '+' : ''}{ira}</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">IRA</p>
+                  <p className="text-2xl font-black text-white tracking-tighter">{ira >= 0 ? '+' : ''}{ira}</p>
                 </div>
-                <div className="bg-emerald-50 px-3 py-1 rounded-full">
-                  <p className="text-[10px] font-bold text-emerald-700 uppercase">Favorável</p>
+                <div className="bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Favorável</p>
                 </div>
               </div>
             </div>
@@ -972,157 +1385,163 @@ function DashboardView({ pacientes, sessoes, onNewSession }: { pacientes: Pacien
         </Card>
 
         {/* 4. DECISÃO CLÍNICA (AÇÃO) */}
-        <Card className="border-t-4 border-t-amber-500">
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">DECISÃO CLÍNICA</h3>
-            <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 size={18} className="text-amber-600 mt-0.5" />
-                <p className="text-sm font-bold text-amber-900">{latestSessao?.contexto_clinico?.conduta || 'Manter conduta atual com monitoramento.'}</p>
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">DECISÃO CLÍNICA</h3>
+            <div className="bg-amber-500/5 p-5 rounded-2xl border border-amber-500/20">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 size={20} className="text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-sm font-bold text-amber-200 leading-tight">{latestSessao?.contexto_clinico?.conduta || 'Manter conduta atual com monitoramento.'}</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">JUSTIFICATIVA:</p>
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+            <div className="space-y-3">
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">JUSTIFICATIVA:</p>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
                 {latestSessao?.resultados_automaticos?.analise_texto || 'Boa resposta autonômica aguda com tendência de estabilização.'}
               </p>
             </div>
-            <div className="flex justify-between items-center pt-2">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">RISCO:</p>
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Baixo</span>
+            <div className="flex justify-between items-center pt-4 border-t border-slate-900">
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">RISCO:</p>
+              <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 rounded-full border border-emerald-500/20 text-[10px] font-black uppercase tracking-[0.2em]">Baixo</span>
             </div>
           </div>
         </Card>
 
         {/* 5. EVOLUÇÃO DA JORNADA */}
-        <Card title="EVOLUÇÃO DA JORNADA" icon={TrendingUp}>
-          <div className="space-y-4">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">EVOLUÇÃO DA JORNADA</h3>
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">SAUA Inicial → Atual</p>
-                <p className="text-2xl font-black text-slate-900">
+                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">SAUA Inicial → Atual</p>
+                <p className="text-3xl font-black text-white tracking-tighter">
                   {firstSessao?.resultados_automaticos?.saua_pre || '0'} → {sauaAtual}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-blue-600">IET: {iet >= 0 ? '+' : ''}{iet}</p>
-                <p className="text-[10px] text-slate-400 font-medium">(Boa evolução)</p>
+                <p className="text-2xl font-black text-indigo-500 tracking-tighter">IET: {iet >= 0 ? '+' : ''}{iet}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Evolução Positiva</p>
               </div>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-50">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">TENDÊNCIA:</p>
-              <p className="text-xs font-bold text-emerald-600 uppercase">Melhora consistente</p>
+            <div className="flex justify-between items-center pt-4 border-t border-slate-900">
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">TENDÊNCIA:</p>
+              <p className="text-xs font-black text-emerald-500 uppercase tracking-widest">Melhora Consistente</p>
             </div>
           </div>
         </Card>
 
         {/* 6. SUSTENTAÇÃO CLÍNICA */}
-        <Card title="SUSTENTAÇÃO CLÍNICA" icon={RefreshCw}>
-          <div className="space-y-4">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">SUSTENTAÇÃO CLÍNICA</h3>
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">ISC (Sustentação)</p>
-                <p className="text-2xl font-black text-slate-900">{isc >= 0 ? '+' : ''}{isc}</p>
+                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">ISC (Sustentação)</p>
+                <p className="text-3xl font-black text-white tracking-tighter">{isc >= 0 ? '+' : ''}{isc}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-slate-400 uppercase font-bold">Pré Atual vs Anterior</p>
-                <p className="text-lg font-bold text-slate-700">
+                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Pré Atual vs Anterior</p>
+                <p className="text-2xl font-black text-slate-400 tracking-tighter">
                   {sauaPre} → {previousSessao?.resultados_automaticos?.saua_pre || sauaPre}
                 </p>
               </div>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-50">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">CLASSIFICAÇÃO:</p>
-              <p className="text-xs font-bold text-amber-600 uppercase">Sustentação parcial</p>
+            <div className="flex justify-between items-center pt-4 border-t border-slate-900">
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">CLASSIFICAÇÃO:</p>
+              <p className="text-xs font-black text-amber-500 uppercase tracking-widest">Sustentação Parcial</p>
             </div>
           </div>
         </Card>
 
         {/* 7. ANÁLISE LONGITUDINAL */}
-        <Card title="ANÁLISE LONGITUDINAL" icon={History}>
-          <div className="space-y-4">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">ANÁLISE LONGITUDINAL</h3>
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">IR (Recorrência)</p>
-                <p className="text-2xl font-black text-slate-900">{ir >= 0 ? '+' : ''}{ir}</p>
+                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">IR (Recorrência)</p>
+                <p className="text-3xl font-black text-white tracking-tighter">{ir >= 0 ? '+' : ''}{ir}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-slate-400 uppercase font-bold">Última Alta vs Atual</p>
-                <p className="text-lg font-bold text-slate-700">68 → {sauaAtual}</p>
+                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Última Alta vs Atual</p>
+                <p className="text-2xl font-black text-slate-400 tracking-tighter">68 → {sauaAtual}</p>
               </div>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-50">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">CLASSIFICAÇÃO:</p>
-              <p className="text-xs font-bold text-blue-600 uppercase">Retorno estável</p>
+            <div className="flex justify-between items-center pt-4 border-t border-slate-900">
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">CLASSIFICAÇÃO:</p>
+              <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Retorno Estável</p>
             </div>
           </div>
         </Card>
 
         {/* 8. CONTEXTO FUNCIONAL */}
-        <Card title="CONTEXTO FUNCIONAL" icon={Activity}>
-          <div className="grid grid-cols-2 gap-4">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">CONTEXTO FUNCIONAL</h3>
+          <div className="grid grid-cols-2 gap-y-8 gap-x-4">
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Dor (EVA)</p>
-              <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.dor_eva || 0}/10</p>
+              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Dor (EVA)</p>
+              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.dor_eva || 0}/10</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Mobilidade</p>
-              <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.mobilidade || 0}/10</p>
+              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Mobilidade</p>
+              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.mobilidade || 0}/10</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Força</p>
-              <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.forca || 0}/10</p>
+              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Força</p>
+              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.forca || 0}/10</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Controle Motor</p>
-              <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.controle_motor || 0}/10</p>
+              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Controle Motor</p>
+              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.controle_motor || 0}/10</p>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
-            <p className="text-[10px] text-slate-400 uppercase font-bold">SCORE LOCOMOTOR:</p>
-            <p className="text-lg font-black text-indigo-600">{latestSessao?.resultados_automaticos?.locomotor || 0}/10</p>
+          <div className="mt-8 pt-6 border-t border-slate-900 flex justify-between items-center">
+            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">SCORE LOCOMOTOR:</p>
+            <p className="text-2xl font-black text-indigo-500 tracking-tighter">{latestSessao?.resultados_automaticos?.locomotor || 0}/10</p>
           </div>
         </Card>
 
         {/* 9. CONTEXTO METABÓLICO */}
-        <Card title="CONTEXTO METABÓLICO" icon={Microscope}>
-          <div className="grid grid-cols-2 gap-4">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">CONTEXTO METABÓLICO</h3>
+          <div className="grid grid-cols-2 gap-y-8 gap-x-4">
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Gordura Corp.</p>
-              <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.gordura_corporal || 0}%</p>
+              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Gordura Corp.</p>
+              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.gordura_corporal || 0}%</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Água (ICE)</p>
-              <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.agua_ice || 0}%</p>
+              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Água (ICE)</p>
+              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.agua_ice || 0}%</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Idade Celular</p>
-              <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.idade_celular || 0} anos</p>
+              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Idade Celular</p>
+              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.idade_celular || 0} <span className="text-[10px] font-normal text-slate-500">anos</span></p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Sono (Horas)</p>
-              <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.horas_sono || 0}h</p>
+              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Sono (Horas)</p>
+              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.horas_sono || 0}h</p>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
-            <p className="text-[10px] text-slate-400 uppercase font-bold">SCORE METABÓLICO:</p>
-            <p className="text-lg font-black text-emerald-600">{latestSessao?.resultados_automaticos?.metabolico || 'Moderado'}</p>
+          <div className="mt-8 pt-6 border-t border-slate-900 flex justify-between items-center">
+            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">SCORE METABÓLICO:</p>
+            <p className="text-2xl font-black text-emerald-500 tracking-tighter">{latestSessao?.resultados_automaticos?.metabolico || 'Moderado'}</p>
           </div>
         </Card>
 
         {/* 10. ALERTAS CLÍNICOS */}
-        <Card title="ALERTAS CLÍNICOS" icon={AlertCircle} className="bg-red-50/30">
-          <div className="space-y-3">
-            <div className="flex items-start gap-2 text-red-600">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <p className="text-xs font-bold">Sustentação parcial entre sessões</p>
+        <Card className="bg-red-500/5 border-red-500/20 rounded-3xl shadow-2xl p-8">
+          <h3 className="text-[10px] font-bold text-red-400 uppercase tracking-[0.2em] mb-8">ALERTAS CLÍNICOS</h3>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 text-red-400">
+              <AlertCircle size={18} className="mt-0.5 shrink-0" />
+              <p className="text-xs font-bold uppercase tracking-wider">Sustentação parcial entre sessões</p>
             </div>
-            <div className="flex items-start gap-2 text-amber-600">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <p className="text-xs font-bold">Total Power ainda reduzido</p>
+            <div className="flex items-start gap-3 text-amber-400">
+              <AlertCircle size={18} className="mt-0.5 shrink-0" />
+              <p className="text-xs font-bold uppercase tracking-wider">Total Power ainda reduzido</p>
             </div>
-            <div className="pt-2 border-t border-red-100">
-              <p className="text-[10px] text-slate-400 font-medium italic">Nenhum alerta crítico no momento</p>
+            <div className="pt-4 border-t border-red-500/10">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest italic">Nenhum alerta crítico no momento</p>
             </div>
           </div>
         </Card>
@@ -1130,37 +1549,45 @@ function DashboardView({ pacientes, sessoes, onNewSession }: { pacientes: Pacien
 
       {/* 11. GRÁFICOS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Evolução SAUA (Linha do Tempo)">
-          <div className="h-[250px] w-full">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10">Evolução SAUA (Linha do Tempo)</h3>
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorSaua" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} domain={[0, 100]} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                <Area type="monotone" dataKey="saua" name="SAUA" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSaua)" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.5} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} domain={[0, 100]} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#000', borderRadius: '16px', border: '1px solid #1e293b', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)' }}
+                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="saua" name="SAUA" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorSaua)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        <Card title="Evolução RMSSD (Pré vs Pós)">
-          <div className="h-[250px] w-full">
+        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10">Evolução RMSSD (Pré vs Pós)</h3>
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none' }} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                <Line type="monotone" dataKey="rmssd_pre" name="RMSSD Pré" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="rmssd" name="RMSSD Pós" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.5} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#000', borderRadius: '16px', border: '1px solid #1e293b' }}
+                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', paddingTop: '20px' }} />
+                <Line type="monotone" dataKey="rmssd_pre" name="RMSSD Pré" stroke="#475569" strokeWidth={2} dot={{ r: 4, fill: '#475569', strokeWidth: 0 }} />
+                <Line type="monotone" dataKey="rmssd" name="RMSSD Pós" stroke="#10b981" strokeWidth={4} dot={{ r: 6, fill: '#10b981', strokeWidth: 0 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1168,42 +1595,74 @@ function DashboardView({ pacientes, sessoes, onNewSession }: { pacientes: Pacien
       </div>
 
       {/* 12. PLANO TERAPÊUTICO */}
-      <Card title="PLANO TERAPÊUTICO" icon={ClipboardList}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <p className="text-[10px] text-slate-400 uppercase font-bold">Acupuntura / Eletro</p>
-            <ul className="text-sm text-slate-700 space-y-1 list-disc list-inside">
-              <li>VG20, YT, IG4, F3, BP6, R3</li>
-              <li>Eletro: VG20–YT 2Hz</li>
+      <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10">PLANO TERAPÊUTICO</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="space-y-4">
+            <p className="text-[10px] text-indigo-500 uppercase font-black tracking-[0.2em]">Acupuntura / Eletro</p>
+            <ul className="text-sm text-slate-300 space-y-2 font-bold">
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>VG20, YT, IG4, F3, BP6, R3</li>
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>Eletro: VG20–YT 2Hz</li>
             </ul>
           </div>
-          <div className="space-y-2">
-            <p className="text-[10px] text-slate-400 uppercase font-bold">Moxa / Auriculo</p>
-            <ul className="text-sm text-slate-700 space-y-1 list-disc list-inside">
-              <li>Moxa: VC6, R3</li>
-              <li>Auriculo: Shenmen, Rim, Simpático</li>
+          <div className="space-y-4">
+            <p className="text-[10px] text-emerald-500 uppercase font-black tracking-[0.2em]">Moxa / Auriculo</p>
+            <ul className="text-sm text-slate-300 space-y-2 font-bold">
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Moxa: VC6, R3</li>
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Auriculo: Shenmen, Rim, Simpático</li>
             </ul>
           </div>
-          <div className="space-y-2">
-            <p className="text-[10px] text-slate-400 uppercase font-bold">Manual / Exercício</p>
-            <ul className="text-sm text-slate-700 space-y-1 list-disc list-inside">
-              <li>Liberação miofascial lombar</li>
-              <li>Eletropilates: controle motor</li>
+          <div className="space-y-4">
+            <p className="text-[10px] text-amber-500 uppercase font-black tracking-[0.2em]">Manual / Exercício</p>
+            <ul className="text-sm text-slate-300 space-y-2 font-bold">
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Liberação miofascial lombar</li>
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Eletropilates: controle motor</li>
             </ul>
           </div>
         </div>
       </Card>
 
+      <div className="flex items-center justify-between mt-12 mb-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-black text-white uppercase tracking-tighter">Dashboard <span className="text-indigo-500">Bioimpedância</span></h2>
+          <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Análise de Composição Corporal e Celular</p>
+        </div>
+        {filteredSessoes.length > 1 && (
+          <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-xl border border-slate-800">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Sessão:</span>
+            <select 
+              className="text-[10px] font-black bg-black border border-slate-800 text-white rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              value={selectedSessaoId || currentSessao?.id || ''}
+              onChange={(e) => setSelectedSessaoId(e.target.value)}
+            >
+              {filteredSessoes.map(s => (
+                <option key={s.id} value={s.id} className="bg-black">
+                  {new Date(s.data_sessao).toLocaleDateString('pt-BR')} - Sessão {s.sessao_n}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+      <BioimpedanceDashboard 
+        sessao={currentSessao} 
+        paciente={selectedPaciente} 
+        profissional={profissionais.find(p => p.id === profissionalId)} 
+      />
+
       {/* 13. LINHA FINAL (PRONTUÁRIO) */}
-      <Card title="LINHA FINAL (PRONTUÁRIO)" icon={FileText} className="bg-slate-900 text-white">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-300 leading-relaxed font-mono">
-            {latestSessao?.contexto_clinico?.conduta || 'Paciente apresenta melhora nos índices de variabilidade da frequência cardíaca. Mantida conduta de acupuntura sistêmica e eletroestimulação.'}
-            {"\n\n"}
-            Pontos: VG20, YT, IG4, F3, BP6, R3. Eletro: 2Hz.
-          </p>
+      <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
+        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">LINHA FINAL (PRONTUÁRIO)</h3>
+        <div className="space-y-6">
+          <div className="bg-slate-900/30 p-6 rounded-2xl border border-slate-800/50">
+            <p className="text-sm text-slate-300 leading-relaxed font-bold font-mono whitespace-pre-wrap">
+              {latestSessao?.contexto_clinico?.conduta || 'Paciente apresenta melhora nos índices de variabilidade da frequência cardíaca. Mantida conduta de acupuntura sistêmica e eletroestimulação.'}
+              {"\n\n"}
+              Pontos: VG20, YT, IG4, F3, BP6, R3. Eletro: 2Hz.
+            </p>
+          </div>
           <div className="flex justify-end">
-            <Button variant="outline" className="text-white border-white/20 hover:bg-white/10" icon={Download}>Copiar Prontuário</Button>
+            <Button variant="outline" className="bg-slate-900 text-white border-slate-800 hover:bg-slate-800 rounded-xl font-bold uppercase tracking-wider text-xs px-8 h-12" icon={Download}>Copiar Prontuário</Button>
           </div>
         </div>
       </Card>
@@ -1245,7 +1704,7 @@ function PacientesView({ pacientes, user, onViewProntuario }: { pacientes: Pacie
     } else {
       const nextId = pacientes.length > 0 
         ? Math.max(...pacientes.map(p => {
-            const match = p.id_paciente.match(/\d+/);
+            const match = p.id_paciente?.match(/\d+/);
             return match ? parseInt(match[0]) : 0;
           })) + 1 
         : 1;
@@ -1263,7 +1722,7 @@ function PacientesView({ pacientes, user, onViewProntuario }: { pacientes: Pacie
         proxima_jornada: 1
       });
     }
-  }, [editingPaciente, pacientes.length, showModal]);
+  }, [editingPaciente, pacientes, showModal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1280,14 +1739,27 @@ function PacientesView({ pacientes, user, onViewProntuario }: { pacientes: Pacie
           icon: <CheckCircle2 className="text-emerald-500" size={20} />,
         });
       } else {
-        await addDoc(collection(db, path), {
+        const patientRef = await addDoc(collection(db, path), {
           ...formData,
           proxima_jornada: Number(formData.proxima_jornada),
           data_criacao: new Date().toISOString(),
           uid: user.uid
         });
+
+        // Automatically create the first journey
+        await addDoc(collection(db, 'jornadas'), {
+          paciente_id: patientRef.id,
+          nome: 'Jornada Inicial',
+          status: 'Ativo',
+          etapa: 1,
+          data_inicio: new Date().toISOString(),
+          motivo_entrada: formData.diagnostico_principal || 'Avaliação Inicial',
+          objetivos: 'Estabelecer baseline e plano terapêutico inicial.',
+          uid: user.uid
+        });
+
         toast.success('Paciente cadastrado com sucesso!', {
-          description: `${formData.nome} foi adicionado à sua base de dados.`,
+          description: `${formData.nome} foi adicionado à sua base de dados e a primeira jornada foi iniciada.`,
           icon: <CheckCircle2 className="text-emerald-500" size={20} />,
         });
       }
@@ -1428,7 +1900,21 @@ function PacientesView({ pacientes, user, onViewProntuario }: { pacientes: Pacie
   );
 }
 
-function SessoesView({ sessoes, pacientes, user, references }: { sessoes: Sessao[], pacientes: Paciente[], user: any, references: Referencia[] }) {
+function SessoesView({ 
+  sessoes, 
+  pacientes, 
+  user, 
+  references, 
+  laudos, 
+  onDownloadLaudo 
+}: { 
+  sessoes: Sessao[], 
+  pacientes: Paciente[], 
+  user: any, 
+  references: Referencia[], 
+  laudos: Laudo[], 
+  onDownloadLaudo: (laudo: Laudo) => void 
+}) {
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSessao, setSelectedSessao] = useState<Sessao | null>(null);
@@ -1505,15 +1991,28 @@ function SessoesView({ sessoes, pacientes, user, references }: { sessoes: Sessao
                   <p className="text-xs text-slate-500">{formatDate(s.data_sessao)}</p>
                 </div>
               </div>
-              <div className="flex items-center justify-between w-full sm:w-auto gap-4 sm:gap-8 border-t sm:border-t-0 pt-4 sm:pt-0">
-                <div className="text-left sm:text-center">
-                  <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">RMSSD (Pré/Pós)</p>
-                  <p className="text-base sm:text-lg font-bold text-indigo-600">
-                    {s.vfc_pre_pos?.rmssd?.pre || (s as any).dados_fisiologicos?.rmssd || 0} / {s.vfc_pre_pos?.rmssd?.pos || (s as any).dados_fisiologicos?.hrv || 0}
-                  </p>
+                <div className="flex items-center justify-between w-full sm:w-auto gap-4 sm:gap-4 border-t sm:border-t-0 pt-4 sm:pt-0">
+                  <div className="text-left sm:text-center">
+                    <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">RMSSD (Pré/Pós)</p>
+                    <p className="text-base sm:text-lg font-bold text-indigo-600">
+                      {s.vfc_pre_pos?.rmssd?.pre || (s as any).dados_fisiologicos?.rmssd || 0} / {s.vfc_pre_pos?.rmssd?.pos || (s as any).dados_fisiologicos?.hrv || 0}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {laudos.find(l => l.sessao_id === s.id) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        icon={FileText} 
+                        onClick={() => onDownloadLaudo(laudos.find(l => l.sessao_id === s.id)!)} 
+                        className="text-xs border-indigo-200 text-indigo-600"
+                      >
+                        Laudo
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" icon={Brain} onClick={() => handleAnalyze(s)} className="text-xs">Analisar</Button>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm" icon={Brain} onClick={() => handleAnalyze(s)} className="text-xs">Analisar</Button>
-              </div>
             </Card>
           );
         })}
@@ -1525,15 +2024,12 @@ function SessoesView({ sessoes, pacientes, user, references }: { sessoes: Sessao
             <div className="p-6 sm:p-8 space-y-6">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Registrar Sessão</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <Select 
+                <PatientSearchSelect 
                   label="Paciente" 
+                  pacientes={pacientes}
                   value={formData.paciente_id} 
-                  onChange={(e: any) => setFormData({...formData, paciente_id: e.target.value})} 
+                  onChange={(val: string) => setFormData({...formData, paciente_id: val})} 
                   required
-                  options={[
-                    { value: '', label: 'Selecione um paciente' },
-                    ...pacientes.map(p => ({ value: p.id, label: p.nome }))
-                  ]}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <Input label="RMSSD (ms)" type="number" step="0.1" value={formData.rmssd} onChange={(e: any) => setFormData({...formData, rmssd: e.target.value})} required />
@@ -1874,10 +2370,12 @@ function ReferenciasView({ referencias }: { referencias: Referencia[] }) {
   );
 }
 
-function RelatoriosView({ pacientes, sessoes }: { pacientes: Paciente[], sessoes: Sessao[] }) {
+function RelatoriosView({ pacientes, sessoes, profissionais, user }: { pacientes: Paciente[], sessoes: Sessao[], profissionais: Profissional[], user: any }) {
   const [filters, setFilters] = useState({ patientId: 'all', period: '30', analysisType: 'evolution' });
+  const [profissionalId, setProfissionalId] = useState<string>('');
   const [report, setReport] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -1889,8 +2387,38 @@ function RelatoriosView({ pacientes, sessoes }: { pacientes: Paciente[], sessoes
       setReport(result);
     } catch (error) {
       console.error(error);
+      toast.error("Erro ao gerar relatório");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleSaveToRecord = async () => {
+    if (!report) return;
+    if (filters.patientId === 'all') {
+      toast.error("Selecione um paciente específico para salvar no prontuário.");
+      return;
+    }
+
+    setSaving(true);
+    const path = 'laudos';
+    try {
+      const paciente = pacientes.find(p => p.id === filters.patientId);
+      await addDoc(collection(db, path), {
+        paciente_id: filters.patientId,
+        paciente_nome: paciente?.nome || 'N/A',
+        profissional_id: profissionalId || null,
+        data_laudo: new Date().toISOString().split('T')[0],
+        tipo_laudo: `Relatório IA - ${filters.analysisType}`,
+        analise_texto: report,
+        uid: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      toast.success("Relatório salvo no prontuário do paciente!");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, path);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1904,6 +2432,32 @@ function RelatoriosView({ pacientes, sessoes }: { pacientes: Paciente[], sessoes
     
     const lines = doc.splitTextToSize(report || "", 180);
     doc.text(lines, 10, 50);
+
+    // Assinatura do Profissional
+    const profissional = profissionais.find(p => p.id === profissionalId);
+    if (profissional) {
+      let y = 60 + (lines.length * 5);
+      if (y > 250) {
+        doc.addPage();
+        y = 30;
+      } else {
+        y += 20;
+      }
+      
+      doc.setDrawColor(150);
+      doc.line(60, y, 150, y);
+      y += 5;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(profissional.nome, 105, y, { align: "center" });
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`${profissional.profissao} - ${profissional.conselho}: ${profissional.registro}`, 105, y, { align: "center" });
+      y += 5;
+      doc.text(`Data de emissão: ${new Date().toLocaleDateString('pt-BR')}`, 105, y, { align: "center" });
+    }
+
     doc.save(`relatorio-${new Date().getTime()}.pdf`);
   };
 
@@ -1943,12 +2497,13 @@ function RelatoriosView({ pacientes, sessoes }: { pacientes: Paciente[], sessoes
       </header>
 
       <Card>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-          <Select 
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <PatientSearchSelect 
             label="Paciente" 
+            pacientes={pacientes}
             value={filters.patientId} 
-            onChange={(e: any) => setFilters({...filters, patientId: e.target.value})} 
-            options={[{ value: 'all', label: 'Todos os Pacientes' }, ...pacientes.map(p => ({ value: p.id, label: p.nome }))]} 
+            onChange={(val: string) => setFilters({...filters, patientId: val})} 
+            showAllOption
           />
           <Select 
             label="Período" 
@@ -1972,6 +2527,15 @@ function RelatoriosView({ pacientes, sessoes }: { pacientes: Paciente[], sessoes
               { value: 'summary', label: 'Sumário Executivo' },
             ]} 
           />
+          <Select 
+            label="Profissional Responsável" 
+            value={profissionalId} 
+            onChange={(e: any) => setProfissionalId(e.target.value)} 
+            options={[
+              { value: '', label: 'Selecione para assinatura...' },
+              ...profissionais.map(p => ({ value: p.id, label: p.nome }))
+            ]} 
+          />
           <Button onClick={handleGenerate} disabled={generating} icon={RefreshCw} className={cn("w-full", generating ? 'animate-spin' : '')}>
             {generating ? 'Gerando...' : 'Gerar Relatório'}
           </Button>
@@ -1983,11 +2547,335 @@ function RelatoriosView({ pacientes, sessoes }: { pacientes: Paciente[], sessoes
           <div className="flex flex-col sm:flex-row justify-end gap-3">
             <Button variant="outline" icon={FileDown} onClick={exportCSV} className="w-full sm:w-auto">Exportar CSV</Button>
             <Button variant="outline" icon={Download} onClick={exportPDF} className="w-full sm:w-auto">Exportar PDF</Button>
+            <Button 
+              icon={FileText} 
+              onClick={handleSaveToRecord} 
+              loading={saving}
+              disabled={filters.patientId === 'all'}
+              className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {saving ? 'Salvando...' : 'Salvar no Prontuário'}
+            </Button>
           </div>
           <Card className="prose prose-indigo max-w-none p-6 sm:p-10">
             <ReactMarkdown>{report}</ReactMarkdown>
           </Card>
         </motion.div>
+      )}
+    </div>
+  );
+}
+
+function JornadasView({ pacientes, jornadas, sessoes, user }: { pacientes: Paciente[], jornadas: Jornada[], sessoes: Sessao[], user: any }) {
+  const [selectedPacienteId, setSelectedPacienteId] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDischargeModalOpen, setIsDischargeModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    nome: '',
+    motivo_entrada: '',
+    objetivos: '',
+    data_inicio: new Date().toISOString().split('T')[0]
+  });
+  const [dischargeData, setDischargeData] = useState({
+    data_fim: new Date().toISOString().split('T')[0],
+    saua_final: '',
+    ganho_total: '',
+    evolucao_global: ''
+  });
+
+  const paciente = pacientes.find(p => p.id === selectedPacienteId);
+  const pacienteJornadas = jornadas.filter(j => j.paciente_id === selectedPacienteId).sort((a, b) => new Date(b.data_inicio).getTime() - new Date(a.data_inicio).getTime());
+  const activeJornada = pacienteJornadas.find(j => j.status === 'Ativo');
+
+  const handleCreateJornada = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPacienteId) return;
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, 'jornadas'), {
+        paciente_id: selectedPacienteId,
+        nome: formData.nome,
+        status: 'Ativo',
+        etapa: pacienteJornadas.length + 1,
+        data_inicio: formData.data_inicio,
+        motivo_entrada: formData.motivo_entrada,
+        objetivos: formData.objetivos,
+        uid: user.uid
+      });
+      toast.success('Nova jornada iniciada!');
+      setIsModalOpen(false);
+      setFormData({ nome: '', motivo_entrada: '', objetivos: '', data_inicio: new Date().toISOString().split('T')[0] });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'jornadas');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDischarge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeJornada) return;
+    setIsSubmitting(true);
+    try {
+      await updateDoc(doc(db, 'jornadas', activeJornada.id!), {
+        status: 'Encerrado',
+        data_fim: dischargeData.data_fim,
+        saua_final: dischargeData.saua_final,
+        ganho_total: dischargeData.ganho_total,
+        evolucao_global: dischargeData.evolucao_global
+      });
+      toast.success('Alta clínica registrada com sucesso!');
+      setIsDischargeModalOpen(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'jornadas');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Jornadas Clínicas</h1>
+          <p className="text-slate-500 text-sm md:text-base">Acompanhamento longitudinal e ciclos de tratamento.</p>
+        </div>
+        <div className="w-full md:w-72">
+          <PatientSearchSelect 
+            label="Selecionar Paciente"
+            pacientes={pacientes}
+            value={selectedPacienteId}
+            onChange={(val: string) => setSelectedPacienteId(val)}
+          />
+        </div>
+      </header>
+
+      {!selectedPacienteId ? (
+        <div className="bg-white rounded-3xl p-20 text-center border border-dashed border-slate-200">
+          <Users size={48} className="mx-auto text-slate-200 mb-4" />
+          <p className="text-slate-400 font-medium">Selecione um paciente para visualizar sua jornada.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Jornada Ativa */}
+            <Card 
+              title="Jornada Atual" 
+              icon={Activity}
+              action={activeJornada ? (
+                <Button variant="danger" className="h-8 text-xs px-3" onClick={() => setIsDischargeModalOpen(true)}>Dar Alta</Button>
+              ) : (
+                <Button className="h-8 text-xs px-3" onClick={() => setIsModalOpen(true)} icon={Plus}>Nova Jornada</Button>
+              )}
+            >
+              {activeJornada ? (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">{activeJornada.nome}</h3>
+                      <p className="text-sm text-slate-500">Iniciada em {formatDate(activeJornada.data_inicio)}</p>
+                    </div>
+                    <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-wider">
+                      Em Andamento
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Motivo de Entrada</p>
+                      <p className="text-slate-700 font-medium">{activeJornada.motivo_entrada}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Objetivos</p>
+                      <p className="text-slate-700 font-medium">{activeJornada.objetivos}</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-slate-50">
+                    <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                      <History size={16} className="text-indigo-600" />
+                      Sessões Vinculadas ({sessoes.filter(s => s.jornada_id === activeJornada.id).length})
+                    </h4>
+                    <div className="space-y-3">
+                      {sessoes.filter(s => s.jornada_id === activeJornada.id).map(s => (
+                        <div key={s.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-indigo-600 font-bold text-xs border border-slate-100">
+                              #{s.sessao_n}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">{formatDate(s.data_sessao)}</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase">{s.fase}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-indigo-600">{s.resultados_automaticos?.saua_pos || 'N/A'}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">SAUA Pós</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-slate-400 italic">O paciente não possui uma jornada ativa no momento.</p>
+                  <Button variant="outline" className="mt-4" onClick={() => setIsModalOpen(true)}>Iniciar Nova Jornada</Button>
+                </div>
+              )}
+            </Card>
+
+            {/* Histórico Longitudinal */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <TrendingUp className="text-indigo-600" size={20} />
+                Histórico Longitudinal
+              </h3>
+              <div className="space-y-4">
+                {pacienteJornadas.filter(j => j.status === 'Encerrado').map(j => (
+                  <Card key={j.id} className="border-l-4 border-l-slate-300">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-bold text-slate-900">{j.nome}</h4>
+                        <p className="text-xs text-slate-500">{formatDate(j.data_inicio)} — {formatDate(j.data_fim!)}</p>
+                      </div>
+                      <div className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-bold uppercase">
+                        Encerrada
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-3 bg-slate-50 rounded-xl">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">SAUA Final</p>
+                        <p className="text-lg font-bold text-slate-900">{j.saua_final || 'N/A'}</p>
+                      </div>
+                      <div className="p-3 bg-slate-50 rounded-xl">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Ganho Total</p>
+                        <p className="text-lg font-bold text-slate-900">{j.ganho_total || 'N/A'}</p>
+                      </div>
+                      <div className="col-span-2 p-3 bg-slate-50 rounded-xl">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Evolução Global</p>
+                        <p className="text-sm font-medium text-slate-700 line-clamp-2">{j.evolucao_global || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <Card title="Visão Geral do Paciente" icon={UserIcon}>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 font-bold text-xl">
+                    {paciente.nome.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">{paciente.nome}</p>
+                    <p className="text-xs text-slate-500">ID: {paciente.id_paciente}</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-slate-50 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total de Jornadas</span>
+                    <span className="font-bold text-slate-700">{pacienteJornadas.length}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total de Sessões</span>
+                    <span className="font-bold text-slate-700">{sessoes.filter(s => s.paciente_id === selectedPacienteId).length}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Status Atual</span>
+                    <span className={cn("font-bold", activeJornada ? "text-emerald-600" : "text-amber-600")}>
+                      {activeJornada ? "Em Tratamento" : "Aguardando Retorno"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <div className="p-6 bg-indigo-600 rounded-3xl text-white space-y-4 shadow-xl shadow-indigo-200">
+              <Flag size={32} className="opacity-50" />
+              <h4 className="text-lg font-bold leading-tight">Acompanhamento Vitalício</h4>
+              <p className="text-indigo-100 text-sm leading-relaxed">
+                Este sistema garante que nenhum dado seja perdido. Mesmo após a alta, o histórico do paciente permanece disponível para comparações futuras.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nova Jornada */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Iniciar Nova Jornada</h2>
+                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              <form onSubmit={handleCreateJornada} className="space-y-4">
+                <Input label="Nome da Jornada (ex: Reabilitação Lombar)" required value={formData.nome} onChange={(e: any) => setFormData({...formData, nome: e.target.value})} />
+                <Input label="Data de Início" type="date" required value={formData.data_inicio} onChange={(e: any) => setFormData({...formData, data_inicio: e.target.value})} />
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Motivo de Entrada</label>
+                  <textarea 
+                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px]"
+                    value={formData.motivo_entrada}
+                    onChange={(e) => setFormData({...formData, motivo_entrada: e.target.value})}
+                    placeholder="Descreva a queixa principal ou motivo do novo ciclo..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Objetivos Terapêuticos</label>
+                  <textarea 
+                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px]"
+                    value={formData.objetivos}
+                    onChange={(e) => setFormData({...formData, objetivos: e.target.value})}
+                    placeholder="Quais os principais objetivos para este ciclo?"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <Button variant="secondary" className="flex-1" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+                  <Button type="submit" className="flex-1" loading={isSubmitting}>Iniciar Jornada</Button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal Alta Clínica */}
+      {isDischargeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Registrar Alta Clínica</h2>
+                <button onClick={() => setIsDischargeModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              <form onSubmit={handleDischarge} className="space-y-4">
+                <Input label="Data de Alta" type="date" required value={dischargeData.data_fim} onChange={(e: any) => setDischargeData({...dischargeData, data_fim: e.target.value})} />
+                <Input label="SAUA Final" value={dischargeData.saua_final} onChange={(e: any) => setDischargeData({...dischargeData, saua_final: e.target.value})} />
+                <Input label="Ganho Total (ex: +40% Vagal)" value={dischargeData.ganho_total} onChange={(e: any) => setDischargeData({...dischargeData, ganho_total: e.target.value})} />
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Evolução Global</label>
+                  <textarea 
+                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px]"
+                    value={dischargeData.evolucao_global}
+                    onChange={(e) => setDischargeData({...dischargeData, evolucao_global: e.target.value})}
+                    placeholder="Resumo da evolução do paciente ao longo desta jornada..."
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <Button variant="secondary" className="flex-1" onClick={() => setIsDischargeModalOpen(false)}>Cancelar</Button>
+                  <Button type="submit" variant="danger" className="flex-1" loading={isSubmitting}>Confirmar Alta</Button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );
@@ -1999,6 +2887,8 @@ function ProntuarioView({
   sessoes, 
   jornadas, 
   laudos, 
+  profissionais,
+  onDownloadLaudo,
   onBack 
 }: { 
   pacienteId: string, 
@@ -2006,12 +2896,23 @@ function ProntuarioView({
   sessoes: Sessao[], 
   jornadas: Jornada[], 
   laudos: Laudo[], 
+  profissionais: Profissional[],
+  onDownloadLaudo: (laudo: Laudo) => void,
   onBack: () => void 
 }) {
   const paciente = pacientes.find(p => p.id === pacienteId);
   const pacienteSessoes = sessoes.filter(s => s.paciente_id === pacienteId).sort((a, b) => new Date(b.data_sessao).getTime() - new Date(a.data_sessao).getTime());
   const pacienteJornadas = jornadas.filter(j => j.paciente_id === pacienteId);
-  const pacienteLaudos = laudos.filter(l => l.paciente_id === pacienteId);
+  const pacienteLaudos = laudos.filter(l => l.paciente_id === pacienteId).sort((a, b) => new Date(b.data_geracao).getTime() - new Date(a.data_geracao).getTime());
+
+  // Agrupar laudos por sessão
+  const laudosAgrupados = pacienteLaudos.reduce((acc, laudo) => {
+    const sessao = sessoes.find(s => s.id === laudo.sessao_id);
+    const key = sessao ? `Sessão #${sessao.sessao_n} - ${formatDate(sessao.data_sessao)}` : 'Relatórios Gerais / Outros';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(laudo);
+    return acc;
+  }, {} as Record<string, Laudo[]>);
 
   if (!paciente) return (
     <div className="flex flex-col items-center justify-center p-20 space-y-4">
@@ -2080,19 +2981,35 @@ function ProntuarioView({
           </Card>
 
           <Card title="Jornadas Clínicas" icon={ChevronRight}>
-            <div className="space-y-3">
-              {pacienteJornadas.length > 0 ? pacienteJornadas.map(j => (
-                <div key={j.id} className="p-3 rounded-xl border border-slate-100 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">{j.nome}</p>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Etapa: {j.etapa}</p>
+            <div className="space-y-4">
+              {pacienteJornadas.length > 0 ? pacienteJornadas.sort((a, b) => new Date(b.data_inicio).getTime() - new Date(a.data_inicio).getTime()).map(j => (
+                <div key={j.id} className="p-4 rounded-2xl border border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">{j.nome}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                        {formatDate(j.data_inicio)} {j.data_fim ? `— ${formatDate(j.data_fim)}` : '(Ativa)'}
+                      </p>
+                    </div>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                      j.status === 'Ativo' ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"
+                    )}>
+                      {j.status}
+                    </span>
                   </div>
-                  <span className={cn(
-                    "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
-                    j.status === 'Ativo' ? "bg-indigo-50 text-indigo-600" : "bg-slate-50 text-slate-400"
-                  )}>
-                    {j.status}
-                  </span>
+                  {j.status === 'Encerrado' && (
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-50">
+                      <div>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase">SAUA Final</p>
+                        <p className="text-xs font-bold text-slate-700">{j.saua_final || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase">Ganho</p>
+                        <p className="text-xs font-bold text-emerald-600">{j.ganho_total || 'N/A'}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )) : (
                 <p className="text-xs text-slate-400 italic text-center py-4">Nenhuma jornada registrada.</p>
@@ -2152,7 +3069,22 @@ function ProntuarioView({
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Fase:</span>
                       <span className="text-xs font-semibold text-slate-600">{s.fase}</span>
                     </div>
-                    <Button variant="ghost" className="text-xs h-8 px-3">Ver Detalhes</Button>
+                    <div className="flex gap-2">
+                      {pacienteLaudos.find(l => l.sessao_id === s.id) && (
+                        <Button 
+                          variant="outline" 
+                          className="text-[10px] h-7 px-2 border-indigo-200 text-indigo-600" 
+                          icon={FileText}
+                          onClick={(e: any) => {
+                            e.stopPropagation();
+                            onDownloadLaudo(pacienteLaudos.find(l => l.sessao_id === s.id)!);
+                          }}
+                        >
+                          Laudo
+                        </Button>
+                      )}
+                      <Button variant="ghost" className="text-xs h-8 px-3">Ver Detalhes</Button>
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -2170,25 +3102,34 @@ function ProntuarioView({
               <ClipboardList className="text-indigo-600" size={20} />
               Laudos e Relatórios
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {pacienteLaudos.length > 0 ? pacienteLaudos.map(l => (
-                <Card key={l.id} className="hover:shadow-md transition-shadow">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                      <FileText size={20} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">{formatDate(l.data_geracao)}</p>
-                      <h4 className="font-bold text-slate-900 truncate">Laudo de Sessão</h4>
-                      <p className="text-sm text-slate-500 line-clamp-2 mt-2">{l.conteudo}</p>
-                    </div>
+            <div className="space-y-8">
+              {Object.keys(laudosAgrupados).length > 0 ? Object.entries(laudosAgrupados).map(([grupo, items]) => (
+                <div key={grupo} className="space-y-4">
+                  <div className="flex items-center gap-2 px-4 py-1 bg-slate-100 rounded-full w-fit">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{grupo}</span>
                   </div>
-                  <div className="mt-4 pt-4 border-t border-slate-50 flex justify-end">
-                    <Button variant="ghost" className="text-xs h-8 px-3" icon={Download}>Baixar PDF</Button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {items.map(l => (
+                      <Card key={l.id} className="hover:shadow-md transition-shadow border-l-4 border-l-indigo-500">
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                            <FileText size={20} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">{formatDate(l.data_geracao)}</p>
+                            <h4 className="font-bold text-slate-900 truncate">Laudo de Sessão</h4>
+                            <p className="text-sm text-slate-500 line-clamp-2 mt-2">{l.conteudo}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-slate-50 flex justify-end">
+                          <Button variant="ghost" className="text-xs h-8 px-3" icon={Download} onClick={() => onDownloadLaudo(l)}>Baixar PDF</Button>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
-                </Card>
+                </div>
               )) : (
-                <div className="col-span-2 bg-slate-50 rounded-3xl p-8 text-center border border-dashed border-slate-200">
+                <div className="bg-slate-50 rounded-3xl p-8 text-center border border-dashed border-slate-200">
                   <p className="text-slate-400 text-sm italic">Nenhum laudo gerado ainda.</p>
                 </div>
               )}
@@ -2456,12 +3397,32 @@ function EquipeView({ profissionais, user }: { profissionais: Profissional[], us
 
 function SettingsView({ 
   theme, 
-  setTheme, 
+  setTheme,
+  hoverEffects,
+  setHoverEffects,
+  blurredBackground,
+  setBlurredBackground,
+  microInteractions,
+  setMicroInteractions,
+  darkMode,
+  setDarkMode,
+  glassEffect,
+  setGlassEffect,
   profissionais, 
   user 
 }: { 
   theme: string, 
-  setTheme: (t: string) => void, 
+  setTheme: (t: string) => void,
+  hoverEffects: boolean,
+  setHoverEffects: (b: boolean) => void,
+  blurredBackground: boolean,
+  setBlurredBackground: (b: boolean) => void,
+  microInteractions: boolean,
+  setMicroInteractions: (b: boolean) => void,
+  darkMode: boolean,
+  setDarkMode: (b: boolean) => void,
+  glassEffect: boolean,
+  setGlassEffect: (b: boolean) => void,
   profissionais: Profissional[], 
   user: any 
 }) {
@@ -2529,6 +3490,132 @@ function SettingsView({
                   <p className="text-xs text-slate-400">Fonte: {t.font}</p>
                 </button>
               ))}
+            </div>
+
+            <div className="pt-6 border-t border-slate-100 space-y-4">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Recursos Visuais</h4>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
+                      <MousePointer2 size={16} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">Efeitos de Passar o Mouse</p>
+                      <p className="text-[10px] text-slate-400">Animações suaves ao interagir com elementos.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setHoverEffects(!hoverEffects)}
+                    className={cn(
+                      "w-12 h-6 rounded-full transition-all relative",
+                      hoverEffects ? "bg-indigo-600" : "bg-slate-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm",
+                      hoverEffects ? "left-7" : "left-1"
+                    )} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
+                      <Layers size={16} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">Desfoque (Blurred Background)</p>
+                      <p className="text-[10px] text-slate-400">Efeito de profundidade em modais e menus.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setBlurredBackground(!blurredBackground)}
+                    className={cn(
+                      "w-12 h-6 rounded-full transition-all relative",
+                      blurredBackground ? "bg-indigo-600" : "bg-slate-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm",
+                      blurredBackground ? "left-7" : "left-1"
+                    )} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
+                      <Zap size={16} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">Microinterações</p>
+                      <p className="text-[10px] text-slate-400">Pequenas animações de feedback visual.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setMicroInteractions(!microInteractions)}
+                    className={cn(
+                      "w-12 h-6 rounded-full transition-all relative",
+                      microInteractions ? "bg-indigo-600" : "bg-slate-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm",
+                      microInteractions ? "left-7" : "left-1"
+                    )} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
+                      {darkMode ? <Moon size={16} /> : <Sun size={16} />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">Modo Escuro (Dark Mode)</p>
+                      <p className="text-[10px] text-slate-400">Alternar entre tema claro e escuro.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setDarkMode(!darkMode)}
+                    className={cn(
+                      "w-12 h-6 rounded-full transition-all relative",
+                      darkMode ? "bg-indigo-600" : "bg-slate-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm",
+                      darkMode ? "left-7" : "left-1"
+                    )} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
+                      <Box size={16} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">Efeito de Vidro (Glass Effect)</p>
+                      <p className="text-[10px] text-slate-400">Transparência moderna em elementos da interface.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setGlassEffect(!glassEffect)}
+                    className={cn(
+                      "w-12 h-6 rounded-full transition-all relative",
+                      glassEffect ? "bg-indigo-600" : "bg-slate-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm",
+                      glassEffect ? "left-7" : "left-1"
+                    )} />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </Card>
@@ -2654,7 +3741,7 @@ function InstrucoesView() {
   );
 }
 
-function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paciente[], user: any, pacienteId?: string }) {
+function FormularioSessaoView({ pacientes, jornadas, profissionais, user, pacienteId }: { pacientes: Paciente[], jornadas: Jornada[], profissionais: Profissional[], user: any, pacienteId?: string }) {
   const moods = [
     { emoji: '😞', label: 'Péssimo' },
     { emoji: '🙁', label: 'Ruim' },
@@ -2662,8 +3749,23 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
     { emoji: '🙂', label: 'Bom' },
     { emoji: '😄', label: 'Excelente' },
   ];
+
+  const evaOptions = [
+    { value: 0, color: '#10b981', label: 'Sem Dor' },
+    { value: 1, color: '#34d399', label: 'Mínima' },
+    { value: 2, color: '#6ee7b7', label: 'Leve' },
+    { value: 3, color: '#a3e635', label: 'Leve' },
+    { value: 4, color: '#fde047', label: 'Moderada' },
+    { value: 5, color: '#facc15', label: 'Moderada' },
+    { value: 6, color: '#fdba74', label: 'Forte' },
+    { value: 7, color: '#fb923c', label: 'Forte' },
+    { value: 8, color: '#f87171', label: 'Muito Forte' },
+    { value: 9, color: '#ef4444', label: 'Muito Forte' },
+    { value: 10, color: '#dc2626', label: 'Insuportável' },
+  ];
   const [analyzing, setAnalyzing] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showBioPreview, setShowBioPreview] = useState(false);
   const [savingLaudo, setSavingLaudo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<Sessao>>({
@@ -2695,22 +3797,38 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
       nivel_stress: 0,
       estado_humor: '',
       conduta: '',
+      massa_gorda: 0,
+      percentual_gordura: 0,
+      agua_corporal_total: 0,
+      indice_hidratacao: 0,
+      agua_massa_magra: 0,
+      intracelular: 0,
+      agua_intracelular_percentual: 0,
+      extracelular: 0,
+      massa_magra: 0,
+      razao_musculo_gordura: 0,
+      massa_muscular: 0,
+      imc: 0,
+      idade: 0,
+      taxa_metabolica_basal: 0,
+      angulo_fase: 0,
     },
     resposta_subjetiva: '',
     resultados_automaticos: {
-      saua_pre: '#VALOR!',
-      classificacao: '#VALOR!',
-      saua_pos: '#VALOR!',
-      das: '#VALOR!',
-      ira: '#VALOR!',
-      metabolico: '#VALOR!',
-      locomotor: 40.0,
-      integrado: '#VALOR!',
-      iet: '#VALOR!',
-      isc: '#VALOR!',
-      ir: '#VALOR!',
+      saua_pre: '',
+      classificacao: '',
+      saua_pos: '',
+      das: '',
+      ira: '',
+      metabolico: '',
+      locomotor: 0,
+      integrado: '',
+      iet: '',
+      isc: '',
+      ir: '',
     },
     observacoes: '',
+    profissional_id: '',
   });
 
   useEffect(() => {
@@ -2718,6 +3836,18 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
       setFormData(prev => ({ ...prev, paciente_id: pacienteId }));
     }
   }, [pacienteId]);
+
+  // Auto-select active journey when patient changes
+  useEffect(() => {
+    if (formData.paciente_id) {
+      const activeJornada = jornadas.find(j => j.paciente_id === formData.paciente_id && j.status === 'Ativo');
+      if (activeJornada) {
+        setFormData(prev => ({ ...prev, jornada_id: activeJornada.id }));
+      } else {
+        setFormData(prev => ({ ...prev, jornada_id: '' }));
+      }
+    }
+  }, [formData.paciente_id, jornadas]);
 
   const handleAnalyzeIA = async () => {
     if (!formData.paciente_id) {
@@ -2784,7 +3914,23 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
       ["Qualidade do Sono", formData.contexto_clinico?.qualidade_sono?.toString()],
       ["Nível de Stress", formData.contexto_clinico?.nivel_stress?.toString()],
       ["Estado de Humor", formData.contexto_clinico?.estado_humor],
-    ];
+      ["Massa Gorda", formData.contexto_clinico?.massa_gorda?.toString()],
+      ["% Gordura", formData.contexto_clinico?.percentual_gordura?.toString()],
+      ["Água Corporal Total", formData.contexto_clinico?.agua_corporal_total?.toString()],
+      ["Índice de Hidratação", formData.contexto_clinico?.indice_hidratacao?.toString()],
+      ["Água na Massa Magra", formData.contexto_clinico?.agua_massa_magra?.toString()],
+      ["Intracelular", formData.contexto_clinico?.intracelular?.toString()],
+      ["Água Intracelular %", formData.contexto_clinico?.agua_intracelular_percentual?.toString()],
+      ["Extracelular", formData.contexto_clinico?.extracelular?.toString()],
+      ["Massa Magra", formData.contexto_clinico?.massa_magra?.toString()],
+      ["Razão Músculo Gordura", formData.contexto_clinico?.razao_musculo_gordura?.toString()],
+      ["Massa Muscular", formData.contexto_clinico?.massa_muscular?.toString()],
+      ["IMC", formData.contexto_clinico?.imc?.toString()],
+      ["Idade", formData.contexto_clinico?.idade?.toString()],
+      ["TMB", formData.contexto_clinico?.taxa_metabolica_basal?.toString()],
+      ["Ângulo de Fase", formData.contexto_clinico?.angulo_fase?.toString()],
+      ["Idade Celular", formData.contexto_clinico?.idade_celular?.toString()],
+    ].filter(([_, value]) => value && value !== '0' && value !== '');
     
     items.forEach(([label, value]) => {
       doc.setFontSize(10);
@@ -2817,6 +3963,31 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
       doc.setFontSize(10);
       const splitText = doc.splitTextToSize((res as any).analise_texto, 170);
       doc.text(splitText, 20, y);
+      y += splitText.length * 5 + 10;
+    }
+
+    // Assinatura do Profissional
+    const profissional = profissionais.find(p => p.id === formData.profissional_id);
+    if (profissional) {
+      if (y > 250) {
+        doc.addPage();
+        y = 30;
+      } else {
+        y += 20;
+      }
+      
+      doc.setDrawColor(150);
+      doc.line(60, y, 150, y);
+      y += 5;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(profissional.nome, 105, y, { align: "center" });
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`${profissional.profissao} - ${profissional.conselho}: ${profissional.registro}`, 105, y, { align: "center" });
+      y += 5;
+      doc.text(`Data de emissão: ${new Date().toLocaleDateString('pt-BR')}`, 105, y, { align: "center" });
     }
     
     doc.save(`relatorio-${paciente?.nome || 'sessao'}-${formData.data_sessao}.pdf`);
@@ -2847,6 +4018,7 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
       await addDoc(collection(db, pathLaudos), {
         sessao_id: sessionRef.id,
         paciente_id: formData.paciente_id,
+        profissional_id: formData.profissional_id || null,
         conteudo: (formData.resultados_automaticos as any).analise_texto,
         data_geracao: new Date().toISOString(),
         uid: user.uid
@@ -2898,13 +4070,35 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
           {/* Identificação */}
           <Card title="Identificação">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Select 
+              <PatientSearchSelect 
                 label="Paciente" 
-                value={formData.paciente_id} 
-                onChange={(e: any) => setFormData({...formData, paciente_id: e.target.value})}
-                options={[{ value: '', label: 'Selecione...' }, ...pacientes.map(p => ({ value: p.id, label: p.nome }))]}
+                required
+                pacientes={pacientes}
+                value={formData.paciente_id || ''} 
+                onChange={(val: string) => setFormData({...formData, paciente_id: val})}
               />
-              <Input label="Jornada_ID" value={formData.jornada_id} onChange={(e: any) => setFormData({...formData, jornada_id: e.target.value})} />
+              <Select 
+                label="Jornada Clínica" 
+                required
+                value={formData.jornada_id} 
+                onChange={(e: any) => setFormData({...formData, jornada_id: e.target.value})}
+                options={[
+                  { value: '', label: 'Selecione uma jornada...' },
+                  ...jornadas.filter(j => j.paciente_id === formData.paciente_id).map(j => ({ value: j.id, label: `${j.nome} (${j.status})` }))
+                ]}
+              />
+              <Select 
+                label="Profissional Responsável" 
+                required
+                value={formData.profissional_id} 
+                onChange={(e: any) => setFormData({...formData, profissional_id: e.target.value})}
+                options={[
+                  { value: '', label: 'Selecione um profissional...' },
+                  ...profissionais.map(p => ({ value: p.id, label: p.nome }))
+                ]}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
               <Input label="Sessão nº" type="number" value={formData.sessao_n} onChange={(e: any) => setFormData({...formData, sessao_n: parseInt(e.target.value)})} />
               <Input label="Data avaliação" type="date" value={formData.data_sessao} onChange={(e: any) => setFormData({...formData, data_sessao: e.target.value})} />
               <Input label="Fase" value={formData.fase} onChange={(e: any) => setFormData({...formData, fase: e.target.value})} />
@@ -2995,17 +4189,91 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
           {/* Contexto clínico complementar */}
           <Card title="Contexto clínico complementar">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Input label="Dor EVA" type="number" value={formData.contexto_clinico?.dor_eva} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, dor_eva: parseFloat(e.target.value)}})} />
+              <div className="col-span-1 md:col-span-4 space-y-2">
+                <label className="text-sm font-medium text-[var(--text-main)]">Escala de Dor (EVA)</label>
+                <div className="flex flex-wrap gap-1.5 p-1.5 bg-slate-50 rounded-xl border border-slate-200">
+                  {evaOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, dor_eva: opt.value}})}
+                      className={cn(
+                        "flex-1 min-w-[40px] h-12 flex flex-col items-center justify-center rounded-lg transition-all border-2",
+                        formData.contexto_clinico?.dor_eva === opt.value 
+                          ? "scale-105 shadow-md border-slate-400" 
+                          : "border-transparent opacity-60 hover:opacity-100"
+                      )}
+                      style={{ backgroundColor: opt.color }}
+                      title={opt.label}
+                    >
+                      <span className="text-white font-bold text-lg leading-none">{opt.value}</span>
+                      <span className="text-[8px] text-white/90 font-medium uppercase tracking-tighter">{opt.label.split(' ')[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <Input label="Mobilidade 0-10" type="number" value={formData.contexto_clinico?.mobilidade} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, mobilidade: parseFloat(e.target.value)}})} />
               <Input label="Força 0-10" type="number" value={formData.contexto_clinico?.forca} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, forca: parseFloat(e.target.value)}})} />
               <Input label="Controle motor 0-10" type="number" value={formData.contexto_clinico?.controle_motor} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, controle_motor: parseFloat(e.target.value)}})} />
-              <Input label="Gordura corporal %" type="number" value={formData.contexto_clinico?.gordura_corporal} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, gordura_corporal: parseFloat(e.target.value)}})} />
-              <Input label="Água ICE" type="number" value={formData.contexto_clinico?.agua_ice} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, agua_ice: parseFloat(e.target.value)}})} />
-              <Input label="Idade celular" type="number" value={formData.contexto_clinico?.idade_celular} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, idade_celular: parseFloat(e.target.value)}})} />
               <Input label="Horas de Sono" type="number" value={formData.contexto_clinico?.horas_sono} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, horas_sono: parseFloat(e.target.value)}})} />
               <Input label="Qualidade do Sono (0-10)" type="number" value={formData.contexto_clinico?.qualidade_sono} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, qualidade_sono: parseFloat(e.target.value)}})} />
               <Input label="Nível de Stress" type="number" value={formData.contexto_clinico?.nivel_stress} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, nivel_stress: parseFloat(e.target.value)}})} />
-              <div className="space-y-1.5 w-full">
+              
+              <div className="col-span-1 md:col-span-4 mt-4 border-t pt-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Gordura</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input label="Massa Gorda (kg)" type="number" value={formData.contexto_clinico?.massa_gorda} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, massa_gorda: parseFloat(e.target.value)}})} />
+                  <Input label="% Gordura" type="number" value={formData.contexto_clinico?.percentual_gordura} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, percentual_gordura: parseFloat(e.target.value)}})} />
+                </div>
+              </div>
+
+              <div className="col-span-1 md:col-span-4 mt-4 border-t pt-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Hidratação</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input label="Água Corporal Total (L)" type="number" value={formData.contexto_clinico?.agua_corporal_total} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, agua_corporal_total: parseFloat(e.target.value)}})} />
+                  <Input label="Índice de Hidratação" type="number" value={formData.contexto_clinico?.indice_hidratacao} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, indice_hidratacao: parseFloat(e.target.value)}})} />
+                  <Input label="Água na Massa Magra" type="number" value={formData.contexto_clinico?.agua_massa_magra} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, agua_massa_magra: parseFloat(e.target.value)}})} />
+                </div>
+              </div>
+
+              <div className="col-span-1 md:col-span-4 mt-4 border-t pt-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Água Intra e Extra Celular</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input label="Intracelular (L)" type="number" value={formData.contexto_clinico?.intracelular} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, intracelular: parseFloat(e.target.value)}})} />
+                  <Input label="Água Intracelular %" type="number" value={formData.contexto_clinico?.agua_intracelular_percentual} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, agua_intracelular_percentual: parseFloat(e.target.value)}})} />
+                  <Input label="Extracelular (L)" type="number" value={formData.contexto_clinico?.extracelular} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, extracelular: parseFloat(e.target.value)}})} />
+                </div>
+              </div>
+
+              <div className="col-span-1 md:col-span-4 mt-4 border-t pt-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Massa Magra e Muscular</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input label="Massa Magra (kg)" type="number" value={formData.contexto_clinico?.massa_magra} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, massa_magra: parseFloat(e.target.value)}})} />
+                  <Input label="Razão Músculo Gordura" type="number" value={formData.contexto_clinico?.razao_musculo_gordura} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, razao_musculo_gordura: parseFloat(e.target.value)}})} />
+                  <Input label="Massa Muscular (kg)" type="number" value={formData.contexto_clinico?.massa_muscular} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, massa_muscular: parseFloat(e.target.value)}})} />
+                </div>
+              </div>
+
+              <div className="col-span-1 md:col-span-4 mt-4 border-t pt-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Peso, Altura e TMB</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input label="IMC" type="number" value={formData.contexto_clinico?.imc} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, imc: parseFloat(e.target.value)}})} />
+                  <Input label="Idade" type="number" value={formData.contexto_clinico?.idade} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, idade: parseFloat(e.target.value)}})} />
+                  <Input label="Taxa Metabólica Basal (kcal)" type="number" value={formData.contexto_clinico?.taxa_metabolica_basal} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, taxa_metabolica_basal: parseFloat(e.target.value)}})} />
+                </div>
+              </div>
+
+              <div className="col-span-1 md:col-span-4 mt-4 border-t pt-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Análise Celular</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input label="Ângulo de Fase" type="number" value={formData.contexto_clinico?.angulo_fase} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, angulo_fase: parseFloat(e.target.value)}})} />
+                  <Input label="Idade" type="number" value={formData.contexto_clinico?.idade} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, idade: parseFloat(e.target.value)}})} />
+                  <Input label="Idade Celular" type="number" value={formData.contexto_clinico?.idade_celular} onChange={(e: any) => setFormData({...formData, contexto_clinico: {...formData.contexto_clinico!, idade_celular: parseFloat(e.target.value)}})} />
+                </div>
+              </div>
+
+              <div className="col-span-1 md:col-span-4 mt-4 border-t pt-4">
                 <label className="text-sm font-medium text-[var(--text-main)]">Estado de Humor</label>
                 <div className="flex gap-2 p-1 bg-slate-50 rounded-lg border border-slate-200 w-fit">
                   {moods.map((m) => (
@@ -3041,7 +4309,8 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
           </Card>
 
           <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => setShowReport(true)} disabled={!formData.resultados_automaticos?.classificacao || formData.resultados_automaticos.classificacao === '#VALOR!'}>Visualizar Relatório Completo</Button>
+            <Button type="button" variant="outline" onClick={() => setShowBioPreview(true)} icon={LayoutDashboard} disabled={!formData.paciente_id}>Pré-visualizar Bioimpedância</Button>
+            <Button type="button" variant="outline" onClick={() => setShowReport(true)} disabled={!formData.resultados_automaticos?.classificacao || formData.resultados_automaticos.classificacao === ''}>Visualizar Relatório Completo</Button>
             <Button type="submit" className="px-8 py-3 text-lg" loading={isSubmitting}>Salvar na Ficha do Paciente</Button>
           </div>
         </div>
@@ -3053,7 +4322,7 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
               {analyzing ? 'Analisando...' : 'Gerar Análise IA'}
             </Button>
           }>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3">
               {[
                 { label: 'SAUA pré', value: formData.resultados_automaticos?.saua_pre },
                 { label: 'Classificação', value: formData.resultados_automaticos?.classificacao },
@@ -3066,27 +4335,84 @@ function FormularioSessaoView({ pacientes, user, pacienteId }: { pacientes: Paci
                 { label: 'IET', value: formData.resultados_automaticos?.iet },
                 { label: 'ISC', value: formData.resultados_automaticos?.isc },
                 { label: 'IR', value: formData.resultados_automaticos?.ir },
-              ].map((res, i) => (
-                <div key={i} className="flex justify-between items-center p-2 bg-white rounded-lg border border-slate-100">
-                  <span className="text-xs font-semibold text-slate-500 uppercase">{res.label}</span>
-                  <span className="font-bold text-indigo-600">{res.value}</span>
+              ].filter(res => res.value && res.value !== '#VALOR!' && res.value !== 0).map((res, i) => (
+                <div key={i} className="group flex flex-col p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{res.label}</span>
+                  <span className="text-sm font-bold text-indigo-600 group-hover:text-indigo-700">{res.value}</span>
                 </div>
               ))}
+              {(!formData.resultados_automaticos?.classificacao || formData.resultados_automaticos.classificacao === '') && !analyzing && (
+                <div className="py-8 text-center space-y-2">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+                    <Brain className="text-slate-300" size={24} />
+                  </div>
+                  <p className="text-xs text-slate-400 italic">Clique em "Gerar Análise IA" para processar os resultados.</p>
+                </div>
+              )}
             </div>
           </Card>
 
           {(formData.resultados_automaticos as any)?.analise_texto && (
-            <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-900 text-sm leading-relaxed">
-              <p className="font-bold mb-2 flex items-center gap-2"><Brain size={16} /> Insight da IA:</p>
-              {(formData.resultados_automaticos as any).analise_texto}
-            </div>
+            <>
+              <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-900 text-sm leading-relaxed">
+                <p className="font-bold mb-2 flex items-center gap-2"><Brain size={16} /> Insight da IA:</p>
+                {(formData.resultados_automaticos as any).analise_texto}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={exportPDF} 
+                  icon={Download} 
+                  className="bg-white border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                >
+                  Baixar PDF
+                </Button>
+                <Button 
+                  onClick={handleSaveLaudo} 
+                  icon={FileText} 
+                  loading={savingLaudo}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {savingLaudo ? 'Salvando...' : 'Salvar no Prontuário'}
+                </Button>
+              </div>
+            </>
           )}
 
           <div className="p-6 bg-amber-50 border border-amber-100 rounded-2xl text-amber-800 text-sm font-medium">
-            {formData.resultados_automaticos?.classificacao === '#VALOR!' ? 'Aguardando processamento de dados...' : `Estado: ${formData.resultados_automaticos?.classificacao}`}
+            {(!formData.resultados_automaticos?.classificacao || formData.resultados_automaticos.classificacao === '') ? 'Aguardando processamento de dados...' : `Estado: ${formData.resultados_automaticos?.classificacao}`}
           </div>
         </div>
       </form>
+
+      {/* Bioimpedance Preview Modal */}
+      <AnimatePresence>
+        {showBioPreview && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-black w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-800 shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setShowBioPreview(false)}
+                className="absolute top-6 right-6 text-white/50 hover:text-white z-10 p-2 bg-white/10 rounded-full transition-colors"
+              >
+                <X size={24} />
+              </button>
+              <div className="p-4">
+                <BioimpedanceDashboard 
+                  sessao={formData as Sessao} 
+                  paciente={pacientes.find(p => p.id === formData.paciente_id)!} 
+                  profissional={profissionais.find(p => p.id === formData.profissional_id)}
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Report Modal */}
       <AnimatePresence>

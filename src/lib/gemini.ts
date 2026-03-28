@@ -88,23 +88,23 @@ export const analyzeScientificReference = async (articleText: string) => {
 
 export const calculateAutomaticResults = async (sessionData: any) => {
   const prompt = `
-    Com base nos seguintes dados de uma sessão clínica de Neurofeedback/VFC, calcule e gere os parâmetros do modelo SAUA (Sistema de Avaliação de Unidade Autonômica).
+    Você é um especialista em análise autonômica e fisiologia do exercício. Com base nos dados fornecidos de uma sessão clínica (VFC - Variabilidade da Frequência Cardíaca, Contexto Clínico, Composição Corporal e Análise Celular), calcule e gere os parâmetros do modelo SAUA (Sistema de Avaliação de Unidade Autonômica).
     
     Dados da Sessão: ${JSON.stringify(sessionData)}
     
-    Parâmetros a calcular/gerar:
-    - saua_pre: valor numérico ou classificação
-    - classificacao: descrição do estado autonômico (ex: Equilibrado, Simpaticotonia, Vagotonia)
-    - saua_pos: valor após intervenção
-    - das: Desvio de Adaptação Sistêmica
-    - ira: Índice de Reserva Autonômica
-    - metabolico: Avaliação do estado metabólico
-    - locomotor: Avaliação do estado locomotor (valor numérico)
-    - integrado: Índice Integrado de Saúde
-    - iet: Índice de Eficiência Terapêutica
-    - isc: Índice de Sobrecarga Clínica
-    - ir: Índice de Recuperação
-    - analise_texto: Um parágrafo de análise clínica qualitativa sobre os resultados.
+    INSTRUÇÕES DE CÁLCULO/GERAÇÃO:
+    - saua_pre: Índice numérico (0-100) representando o estado autonômico inicial.
+    - classificacao: Diagnóstico autonômico (ex: Equilibrado, Simpaticotonia Leve/Moderada/Severa, Vagotonia Leve/Moderada/Severa).
+    - saua_pos: Índice numérico (0-100) após a intervenção.
+    - das (Desvio de Adaptação Sistêmica): Grau de desvio do equilíbrio ideal.
+    - ira (Índice de Reserva Autonômica): Capacidade de resposta do sistema.
+    - metabolico: Avaliação qualitativa do estado metabólico baseado na FC e VFC.
+    - locomotor: Avaliação do estado locomotor (0-100).
+    - integrado: Índice Integrado de Saúde (combinação de VFC e contexto clínico).
+    - iet (Índice de Eficiência Terapêutica): Comparação entre pré e pós.
+    - isc (Índice de Sobrecarga Clínica): Nível de estresse fisiológico.
+    - ir (Índice de Recuperação): Capacidade de retorno ao basal.
+    - analise_texto: Um parágrafo de análise clínica qualitativa e insights sobre os resultados.
     
     Retorne um objeto JSON seguindo estritamente o esquema.
   `;

@@ -44,6 +44,22 @@ export interface Sessao {
     nivel_stress: number;
     estado_humor: string;
     conduta: string;
+    // Novos campos solicitados
+    massa_gorda?: number;
+    percentual_gordura?: number;
+    agua_corporal_total?: number;
+    indice_hidratacao?: number;
+    agua_massa_magra?: number;
+    intracelular?: number;
+    agua_intracelular_percentual?: number;
+    extracelular?: number;
+    massa_magra?: number;
+    razao_musculo_gordura?: number;
+    massa_muscular?: number;
+    imc?: number;
+    idade?: number;
+    taxa_metabolica_basal?: number;
+    angulo_fase?: number;
   };
   resposta_subjetiva?: string;
   resultados_automaticos?: {
@@ -61,6 +77,7 @@ export interface Sessao {
     analise_texto?: string;
   };
   observacoes: string;
+  profissional_id?: string;
   uid: string;
 }
 
@@ -80,9 +97,16 @@ export interface Jornada {
   id?: string;
   paciente_id: string;
   nome: string;
-  status: string;
+  status: 'Ativo' | 'Encerrado';
   etapa: number;
-  leitura: string;
+  data_inicio: string;
+  data_fim?: string;
+  motivo_entrada: string;
+  saua_inicial?: string;
+  saua_final?: string;
+  objetivos: string;
+  ganho_total?: string;
+  evolucao_global?: string;
   uid: string;
 }
 
@@ -90,6 +114,7 @@ export interface Laudo {
   id?: string;
   sessao_id: string;
   paciente_id: string;
+  profissional_id?: string;
   conteudo: string;
   data_geracao: string;
   uid: string;
