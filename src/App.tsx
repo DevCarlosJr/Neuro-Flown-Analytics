@@ -212,17 +212,17 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any, label:
 const Card = ({ children, className, title, action, icon: Icon }: { children: React.ReactNode, className?: string, title?: string, action?: React.ReactNode, icon?: any }) => (
   <div className={cn("bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden", className)}>
     {(title || action) && (
-      <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center">
+      <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-50 flex justify-between items-center">
         {title && (
           <div className="flex items-center gap-2">
             {Icon && <Icon size={18} className="text-[var(--primary)]" />}
-            <h3 className="font-semibold text-[var(--text-main)]">{title}</h3>
+            <h3 className="font-semibold text-sm md:text-base text-[var(--text-main)]">{title}</h3>
           </div>
         )}
         {action}
       </div>
     )}
-    <div className="p-6">{children}</div>
+    <div className="p-4 md:p-6">{children}</div>
   </div>
 );
 
@@ -284,7 +284,7 @@ const Select = ({ label, options, ...props }: any) => (
   </div>
 );
 
-const PatientSearchSelect = ({ label, pacientes, value, onChange, required, showAllOption = false, dark = false }: { label: string, pacientes: Paciente[], value: string, onChange: (val: string) => void, required?: boolean, showAllOption?: boolean, dark?: boolean }) => {
+const PatientSearchSelect = ({ label, pacientes, value, onChange, required, showAllOption = false }: { label: string, pacientes: Paciente[], value: string, onChange: (val: string) => void, required?: boolean, showAllOption?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPacientes, setFilteredPacientes] = useState<Paciente[]>([]);
@@ -319,19 +319,18 @@ const PatientSearchSelect = ({ label, pacientes, value, onChange, required, show
 
   return (
     <div className="space-y-1.5 w-full relative" ref={dropdownRef}>
-      {label && <label className={cn("text-sm font-medium", dark ? "text-slate-400" : "text-slate-700")}>{label}{required && <span className="text-red-500 ml-1">*</span>}</label>}
+      {label && <label className="text-sm font-medium text-slate-700">{label}{required && <span className="text-red-500 ml-1">*</span>}</label>}
       <div 
         className={cn(
-          "w-full px-4 py-2 rounded-lg border flex items-center justify-between cursor-pointer transition-all",
-          dark ? "bg-black border-slate-800 text-white" : "bg-white border-slate-200 text-slate-900",
+          "w-full px-4 py-2 rounded-lg border border-slate-200 bg-white flex items-center justify-between cursor-pointer transition-all",
           isOpen ? "ring-2 ring-indigo-500 border-indigo-500" : ""
         )}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={cn("truncate", (!selectedPaciente && !isAllSelected) ? (dark ? "text-slate-600" : "text-slate-400") : (dark ? "text-white font-black" : "text-slate-900 font-medium"))}>
+        <span className={cn("truncate", (!selectedPaciente && !isAllSelected) ? "text-slate-400" : "text-slate-900 font-medium")}>
           {isAllSelected ? 'Todos os Pacientes' : (selectedPaciente ? `${selectedPaciente.nome} (${selectedPaciente.id_paciente})` : 'Selecione ou busque...')}
         </span>
-        <Search size={16} className={cn("shrink-0 ml-2", dark ? "text-indigo-500" : "text-slate-400")} />
+        <Search size={16} className="text-slate-400 shrink-0 ml-2" />
       </div>
 
       <AnimatePresence>
@@ -340,36 +339,29 @@ const PatientSearchSelect = ({ label, pacientes, value, onChange, required, show
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={cn(
-              "absolute z-50 left-0 right-0 mt-2 rounded-xl shadow-2xl border overflow-hidden",
-              dark ? "bg-black border-slate-800" : "bg-white border-slate-100"
-            )}
+            className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden"
           >
-            <div className={cn("p-2 border-b", dark ? "border-slate-800" : "border-slate-50")}>
+            <div className="p-2 border-b border-slate-50">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   autoFocus
                   type="text"
                   placeholder="Buscar por nome ou ID..."
-                  className={cn(
-                    "w-full pl-9 pr-4 py-2 text-sm rounded-lg border-none focus:ring-2 focus:ring-indigo-500 outline-none",
-                    dark ? "bg-slate-900 text-white placeholder:text-slate-600" : "bg-slate-50 text-slate-900"
-                  )}
+                  className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 rounded-lg border-none focus:ring-2 focus:ring-indigo-500 outline-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
             </div>
-            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+            <div className="max-h-60 overflow-y-auto">
               {showAllOption && !searchTerm && (
                 <button
                   type="button"
                   className={cn(
-                    "w-full px-4 py-3 text-left transition-colors border-b",
-                    dark ? "hover:bg-slate-900 border-slate-800" : "hover:bg-slate-50 border-slate-50",
-                    value === 'all' ? (dark ? "bg-indigo-900/20" : "bg-indigo-50") : ""
+                    "w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors border-b border-slate-50",
+                    value === 'all' ? "bg-indigo-50" : ""
                   )}
                   onClick={() => {
                     onChange('all');
@@ -377,7 +369,7 @@ const PatientSearchSelect = ({ label, pacientes, value, onChange, required, show
                     setSearchTerm('');
                   }}
                 >
-                  <span className={cn("text-sm font-bold", dark ? "text-indigo-400" : "text-indigo-600")}>Todos os Pacientes</span>
+                  <span className="text-sm font-bold text-indigo-600">Todos os Pacientes</span>
                 </button>
               )}
               {filteredPacientes.length > 0 ? (
@@ -386,9 +378,8 @@ const PatientSearchSelect = ({ label, pacientes, value, onChange, required, show
                     key={p.id}
                     type="button"
                     className={cn(
-                      "w-full px-4 py-3 text-left transition-colors border-b last:border-none",
-                      dark ? "hover:bg-slate-900 border-slate-800 text-slate-300" : "hover:bg-slate-50 border-slate-50 text-slate-700",
-                      value === p.id ? (dark ? "bg-indigo-900/20 text-white" : "bg-indigo-50 text-indigo-700") : ""
+                      "w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors flex flex-col gap-0.5",
+                      value === p.id ? "bg-indigo-50" : ""
                     )}
                     onClick={() => {
                       onChange(p.id!);
@@ -396,15 +387,13 @@ const PatientSearchSelect = ({ label, pacientes, value, onChange, required, show
                       setSearchTerm('');
                     }}
                   >
-                    <div className="flex flex-col">
-                      <span className={cn("text-sm font-bold", value === p.id ? (dark ? "text-indigo-400" : "text-indigo-600") : (dark ? "text-white" : "text-slate-900"))}>{p.nome}</span>
-                      <span className="text-[10px] opacity-60 uppercase tracking-wider">{p.id_paciente}</span>
-                    </div>
+                    <span className="text-sm font-bold text-slate-900">{p.nome}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {p.id_paciente}</span>
                   </button>
                 ))
               ) : (
-                <div className={cn("px-4 py-8 text-center", dark ? "text-slate-600" : "text-slate-400")}>
-                  <p className="text-sm">Nenhum paciente encontrado</p>
+                <div className="px-4 py-8 text-center">
+                  <p className="text-sm text-slate-400 italic">Nenhum paciente encontrado.</p>
                 </div>
               )}
             </div>
@@ -1067,73 +1056,65 @@ function DashboardView({
   };
 
   const getSauaColor = (score: number) => {
-    if (score >= 70) return "text-indigo-500";
-    if (score >= 40) return "text-emerald-500";
-    if (score >= 20) return "text-amber-500";
-    return "text-red-500";
+    if (score >= 70) return "text-blue-600";
+    if (score >= 40) return "text-emerald-600";
+    if (score >= 20) return "text-amber-600";
+    return "text-red-600";
   };
 
   if (!selectedPacienteId) {
     return (
-      <div className="space-y-8 bg-black -m-8 p-8 min-h-screen text-white font-sans">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-black p-8 rounded-3xl border border-slate-800 shadow-2xl backdrop-blur-md bg-black/80 sticky top-0 z-10">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Dashboard <span className="text-indigo-500">Clínico</span></h1>
-            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Selecione um paciente para visualizar a análise detalhada.</p>
+      <div className="space-y-8">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Dashboard Clínico</h1>
+            <p className="text-slate-500 text-sm md:text-base">Selecione um paciente para visualizar a análise detalhada.</p>
           </div>
-          <div className="w-full md:w-80">
-            <div className="bg-slate-900/50 p-1 rounded-xl border border-slate-800">
-              <PatientSearchSelect 
-                label=""
-                pacientes={pacientes}
-                value={selectedPacienteId}
-                onChange={(val: string) => setSelectedPacienteId(val)}
-                dark={true}
-              />
-            </div>
+          <div className="w-full md:w-72">
+            <PatientSearchSelect 
+              label="Buscar Paciente"
+              pacientes={pacientes}
+              value={selectedPacienteId}
+              onChange={(val: string) => setSelectedPacienteId(val)}
+            />
           </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { label: "Total Pacientes", value: pacientes.length, icon: Users, color: "text-indigo-500", bg: "bg-indigo-500/10" },
-            { label: "Sessões Realizadas", value: sessoes.length, icon: Activity, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-            { label: "Média de Idade", value: pacientes.length ? Math.round(pacientes.reduce((acc, p) => acc + calculateAge(p.data_nascimento), 0) / pacientes.length) : 0, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
-            { label: "Alertas Ativos", value: 3, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
+            { label: "Total Pacientes", value: pacientes.length, icon: Users, color: "bg-blue-500" },
+            { label: "Sessões Realizadas", value: sessoes.length, icon: Activity, color: "bg-indigo-500" },
+            { label: "Média de Idade", value: pacientes.length ? Math.round(pacientes.reduce((acc, p) => acc + calculateAge(p.data_nascimento), 0) / pacientes.length) : 0, icon: Clock, color: "bg-emerald-500" },
+            { label: "Alertas Ativos", value: 3, icon: AlertCircle, color: "bg-amber-500" },
           ].map((stat, i) => (
-            <Card key={i} className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8 relative overflow-hidden group hover:border-slate-700 transition-all">
-              <div className={cn("absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-5 blur-2xl transition-all group-hover:opacity-10", stat.bg)} />
-              <div className="flex items-center gap-6">
-                <div className={cn("p-4 rounded-2xl border border-white/5", stat.bg, stat.color)}>
-                  <stat.icon size={28} />
+            <Card key={i} className="relative overflow-hidden">
+              <div className={cn("absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-10", stat.color)} />
+              <div className="flex items-center gap-4">
+                <div className={cn("p-3 rounded-xl text-white", stat.color)}>
+                  <stat.icon size={24} />
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{stat.label}</p>
-                  <p className="text-4xl font-black text-white tracking-tighter">{stat.value}</p>
+                <div>
+                  <p className="text-sm font-medium text-slate-500">{stat.label}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
                 </div>
               </div>
             </Card>
           ))}
         </div>
 
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10">Distribuição de Pacientes por Sexo</h3>
-          <div className="h-[350px] w-full">
+        <Card title="Distribuição de Pacientes por Sexo">
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={[
                 { name: 'Masculino', count: pacientes.filter(p => p.sexo === 'M').length },
                 { name: 'Feminino', count: pacientes.filter(p => p.sexo === 'F').length },
                 { name: 'Outros', count: pacientes.filter(p => p.sexo === 'O').length },
               ]}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.5} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
-                <Tooltip 
-                  cursor={{fill: '#ffffff05'}}
-                  contentStyle={{ backgroundColor: '#000', borderRadius: '16px', border: '1px solid #1e293b' }}
-                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                />
-                <Bar dataKey="count" fill="#6366f1" radius={[12, 12, 0, 0]} barSize={60} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip cursor={{fill: '#f8fafc'}} />
+                <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1251,27 +1232,32 @@ ${latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em
   }));
 
   return (
-    <div className="space-y-8 pb-12 bg-black -m-8 p-8 min-h-screen text-white font-sans">
+    <div className="space-y-6 pb-12">
       {/* 1. HEADER SUPERIOR */}
-      <header className="bg-black p-8 rounded-3xl border border-slate-800 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sticky top-0 z-10 backdrop-blur-md bg-black/80">
-        <div className="space-y-2">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSelectedPacienteId('')} className="p-2 hover:bg-slate-800 rounded-full transition-all border border-transparent hover:border-slate-700">
-              <ArrowLeft size={20} className="text-slate-400" />
+      <header className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sticky top-0 z-10">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSelectedPacienteId('')} className="p-1 hover:bg-slate-100 rounded-full transition-colors">
+              <ArrowLeft size={20} className="text-slate-500" />
             </button>
-            <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{selectedPaciente.nome}</h1>
+            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">{selectedPaciente.nome}</h1>
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-indigo-500"></span>Idade: {calculateAge(selectedPaciente.data_nascimento)} anos</span>
-            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-emerald-500"></span>Data: {new Date().toLocaleDateString('pt-BR')}</span>
-            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-amber-500"></span>Sessão nº: {filteredSessoes.length}</span>
-            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-indigo-500"></span>Jornada: Ativa</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 font-medium">
+            <span>Idade: {calculateAge(selectedPaciente.data_nascimento)} anos</span>
+            <span className="text-slate-300">|</span>
+            <span>Data: {new Date().toLocaleDateString('pt-BR')}</span>
+            <span className="text-slate-300">|</span>
+            <span>Sessão nº: {filteredSessoes.length}</span>
+            <span className="text-slate-300">|</span>
+            <span>Jornada: Ativa (Início: {new Date(selectedPaciente.data_criacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})</span>
+            <span className="text-slate-300">|</span>
+            <span>Sessões: {filteredSessoes.length}</span>
           </div>
         </div>
         <div className="flex gap-3 w-full md:w-auto relative">
-          <Button onClick={() => onNewSession(selectedPaciente)} icon={Plus} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 border-none rounded-xl font-bold uppercase tracking-wider text-xs px-6">Nova Sessão</Button>
+          <Button onClick={() => onNewSession(selectedPaciente)} icon={Plus} className="flex-1 md:flex-none">Nova Sessão</Button>
           <div className="relative flex-1 md:flex-none">
-            <Button variant="secondary" icon={FileDown} className="w-full bg-slate-900 text-white border-slate-800 hover:bg-slate-800 rounded-xl font-bold uppercase tracking-wider text-xs px-6" onClick={() => setShowReportOptions(!showReportOptions)}>Relatório</Button>
+            <Button variant="secondary" icon={FileDown} className="w-full" onClick={() => setShowReportOptions(!showReportOptions)}>Relatório</Button>
             
             <AnimatePresence>
               {showReportOptions && (
@@ -1279,24 +1265,22 @@ ${latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 top-full mt-2 w-72 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-4 z-20 space-y-4"
+                  className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 p-4 z-20 space-y-4"
                 >
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Profissional Responsável</label>
-                    <select 
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Profissional Responsável</label>
+                    <Select 
                       value={profissionalId}
                       onChange={(e: any) => setProfissionalId(e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-700 bg-black text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    >
-                      <option value="">Selecione o Profissional...</option>
-                      {profissionais.map(p => (
-                        <option key={p.id} value={p.id}>{p.nome}</option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: 'Selecione o Profissional...' },
+                        ...profissionais.map(p => ({ value: p.id, label: p.nome }))
+                      ]}
+                    />
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    <Button variant="outline" icon={Download} onClick={handleDownloadPDF} className="justify-start text-xs h-9 border-slate-700 text-slate-300 hover:bg-slate-800">Baixar em PDF</Button>
-                    <Button variant="outline" icon={ClipboardList} onClick={handleSaveToRecord} disabled={saving} className="justify-start text-xs h-9 border-slate-700 text-slate-300 hover:bg-slate-800">
+                    <Button variant="outline" icon={Download} onClick={handleDownloadPDF} className="justify-start text-xs h-9">Baixar em PDF</Button>
+                    <Button variant="outline" icon={ClipboardList} onClick={handleSaveToRecord} disabled={saving} className="justify-start text-xs h-9">
                       {saving ? 'Salvando...' : 'Salvar no Prontuário'}
                     </Button>
                   </div>
@@ -1307,365 +1291,368 @@ ${latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* 2. BLOCO PRINCIPAL — ESTADO ATUAL */}
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <div className="space-y-8 text-center">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">SAUA ATUAL</h3>
-            <div className="space-y-2">
-              <p className={cn("text-8xl font-black tracking-tighter leading-none", getSauaColor(sauaAtual))}>{sauaAtual}</p>
-              <p className="text-sm font-bold text-white uppercase tracking-widest">{latestSessao?.resultados_automaticos?.classificacao || 'N/A'}</p>
-            </div>
-            <div className="flex justify-center gap-8 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              <div className="text-center space-y-1">
-                <p>RMSSD</p>
-                <p className="text-white text-lg font-black">{latestSessao?.vfc_pre_pos?.rmssd?.pos || 0}</p>
-              </div>
-              <div className="text-center space-y-1">
-                <p>FC</p>
-                <p className="text-white text-lg font-black">{latestSessao?.vfc_pre_pos?.fc_media?.pos || 0}</p>
-              </div>
-              <div className="text-center space-y-1">
-                <p>TP</p>
-                <p className="text-white text-lg font-black">{latestSessao?.vfc_pre_pos?.total_power?.pos || 0}</p>
-              </div>
-            </div>
-            <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800/50">
-              <p className="text-[10px] text-slate-400 leading-relaxed font-bold uppercase tracking-wider">
-                <span className="text-indigo-500">STATUS:</span> {latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em análise.'}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        {/* 3. RESPOSTA AGUDA DA SESSÃO */}
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">RESPOSTA DA SESSÃO</h3>
-            <div className="space-y-6">
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">SAUA</p>
-                  <p className="text-3xl font-black text-white tracking-tighter">{sauaPre} → {sauaAtual}</p>
-                </div>
-                <div className="text-right">
-                  <p className={cn("text-2xl font-black tracking-tighter", das >= 0 ? "text-emerald-500" : "text-red-500")}>
-                    DAS: {das >= 0 ? '+' : ''}{das}
-                  </p>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{das >= 0 ? 'Positiva' : 'Negativa'}</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4 py-6 border-y border-slate-900">
-                <div className="space-y-1">
-                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">RMSSD</p>
-                  <p className="text-sm font-black text-white">{latestSessao?.vfc_pre_pos?.rmssd?.pre} → {latestSessao?.vfc_pre_pos?.rmssd?.pos}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">SDNN</p>
-                  <p className="text-sm font-black text-white">{latestSessao?.vfc_pre_pos?.sdnn?.pre} → {latestSessao?.vfc_pre_pos?.sdnn?.pos}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">TP</p>
-                  <p className="text-sm font-black text-white">{latestSessao?.vfc_pre_pos?.total_power?.pre} → {latestSessao?.vfc_pre_pos?.total_power?.pos}</p>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">IRA</p>
-                  <p className="text-2xl font-black text-white tracking-tighter">{ira >= 0 ? '+' : ''}{ira}</p>
-                </div>
-                <div className="bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">
-                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Favorável</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* 4. DECISÃO CLÍNICA (AÇÃO) */}
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">DECISÃO CLÍNICA</h3>
-            <div className="bg-amber-500/5 p-5 rounded-2xl border border-amber-500/20">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 size={20} className="text-amber-500 mt-0.5 shrink-0" />
-                <p className="text-sm font-bold text-amber-200 leading-tight">{latestSessao?.contexto_clinico?.conduta || 'Manter conduta atual com monitoramento.'}</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">JUSTIFICATIVA:</p>
-              <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                {latestSessao?.resultados_automaticos?.analise_texto || 'Boa resposta autonômica aguda com tendência de estabilização.'}
-              </p>
-            </div>
-            <div className="flex justify-between items-center pt-4 border-t border-slate-900">
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">RISCO:</p>
-              <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 rounded-full border border-emerald-500/20 text-[10px] font-black uppercase tracking-[0.2em]">Baixo</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* 5. EVOLUÇÃO DA JORNADA */}
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">EVOLUÇÃO DA JORNADA</h3>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">SAUA Inicial → Atual</p>
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  {firstSessao?.resultados_automaticos?.saua_pre || '0'} → {sauaAtual}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-black text-indigo-500 tracking-tighter">IET: {iet >= 0 ? '+' : ''}{iet}</p>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Evolução Positiva</p>
-              </div>
-            </div>
-            <div className="flex justify-between items-center pt-4 border-t border-slate-900">
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">TENDÊNCIA:</p>
-              <p className="text-xs font-black text-emerald-500 uppercase tracking-widest">Melhora Consistente</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* 6. SUSTENTAÇÃO CLÍNICA */}
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">SUSTENTAÇÃO CLÍNICA</h3>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">ISC (Sustentação)</p>
-                <p className="text-3xl font-black text-white tracking-tighter">{isc >= 0 ? '+' : ''}{isc}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Pré Atual vs Anterior</p>
-                <p className="text-2xl font-black text-slate-400 tracking-tighter">
-                  {sauaPre} → {previousSessao?.resultados_automaticos?.saua_pre || sauaPre}
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-between items-center pt-4 border-t border-slate-900">
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">CLASSIFICAÇÃO:</p>
-              <p className="text-xs font-black text-amber-500 uppercase tracking-widest">Sustentação Parcial</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* 7. ANÁLISE LONGITUDINAL */}
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">ANÁLISE LONGITUDINAL</h3>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">IR (Recorrência)</p>
-                <p className="text-3xl font-black text-white tracking-tighter">{ir >= 0 ? '+' : ''}{ir}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Última Alta vs Atual</p>
-                <p className="text-2xl font-black text-slate-400 tracking-tighter">68 → {sauaAtual}</p>
-              </div>
-            </div>
-            <div className="flex justify-between items-center pt-4 border-t border-slate-900">
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">CLASSIFICAÇÃO:</p>
-              <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Retorno Estável</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* 8. CONTEXTO FUNCIONAL */}
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">CONTEXTO FUNCIONAL</h3>
-          <div className="grid grid-cols-2 gap-y-8 gap-x-4">
-            <div className="space-y-1">
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Dor (EVA)</p>
-              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.dor_eva || 0}/10</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Mobilidade</p>
-              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.mobilidade || 0}/10</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Força</p>
-              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.forca || 0}/10</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Controle Motor</p>
-              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.controle_motor || 0}/10</p>
-            </div>
-          </div>
-          <div className="mt-8 pt-6 border-t border-slate-900 flex justify-between items-center">
-            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">SCORE LOCOMOTOR:</p>
-            <p className="text-2xl font-black text-indigo-500 tracking-tighter">{latestSessao?.resultados_automaticos?.locomotor || 0}/10</p>
-          </div>
-        </Card>
-
-        {/* 9. CONTEXTO METABÓLICO */}
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">CONTEXTO METABÓLICO</h3>
-          <div className="grid grid-cols-2 gap-y-8 gap-x-4">
-            <div className="space-y-1">
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Gordura Corp.</p>
-              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.gordura_corporal || 0}%</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Água (ICE)</p>
-              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.agua_ice || 0}%</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Idade Celular</p>
-              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.idade_celular || 0} <span className="text-[10px] font-normal text-slate-500">anos</span></p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Sono (Horas)</p>
-              <p className="text-lg font-black text-white">{latestSessao?.contexto_clinico?.horas_sono || 0}h</p>
-            </div>
-          </div>
-          <div className="mt-8 pt-6 border-t border-slate-900 flex justify-between items-center">
-            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">SCORE METABÓLICO:</p>
-            <p className="text-2xl font-black text-emerald-500 tracking-tighter">{latestSessao?.resultados_automaticos?.metabolico || 'Moderado'}</p>
-          </div>
-        </Card>
-
-        {/* 10. ALERTAS CLÍNICOS */}
-        <Card className="bg-red-500/5 border-red-500/20 rounded-3xl shadow-2xl p-8">
-          <h3 className="text-[10px] font-bold text-red-400 uppercase tracking-[0.2em] mb-8">ALERTAS CLÍNICOS</h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 text-red-400">
-              <AlertCircle size={18} className="mt-0.5 shrink-0" />
-              <p className="text-xs font-bold uppercase tracking-wider">Sustentação parcial entre sessões</p>
-            </div>
-            <div className="flex items-start gap-3 text-amber-400">
-              <AlertCircle size={18} className="mt-0.5 shrink-0" />
-              <p className="text-xs font-bold uppercase tracking-wider">Total Power ainda reduzido</p>
-            </div>
-            <div className="pt-4 border-t border-red-500/10">
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest italic">Nenhum alerta crítico no momento</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* 11. GRÁFICOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10">Evolução SAUA (Linha do Tempo)</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorSaua" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.5} />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} domain={[0, 100]} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#000', borderRadius: '16px', border: '1px solid #1e293b', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)' }}
-                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                />
-                <Area type="monotone" dataKey="saua" name="SAUA" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorSaua)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10">Evolução RMSSD (Pré vs Pós)</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.5} />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10, fontWeight: 'bold'}} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#000', borderRadius: '16px', border: '1px solid #1e293b' }}
-                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', paddingTop: '20px' }} />
-                <Line type="monotone" dataKey="rmssd_pre" name="RMSSD Pré" stroke="#475569" strokeWidth={2} dot={{ r: 4, fill: '#475569', strokeWidth: 0 }} />
-                <Line type="monotone" dataKey="rmssd" name="RMSSD Pós" stroke="#10b981" strokeWidth={4} dot={{ r: 6, fill: '#10b981', strokeWidth: 0 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      </div>
-
-      {/* 12. PLANO TERAPÊUTICO */}
-      <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10">PLANO TERAPÊUTICO</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          <div className="space-y-4">
-            <p className="text-[10px] text-indigo-500 uppercase font-black tracking-[0.2em]">Acupuntura / Eletro</p>
-            <ul className="text-sm text-slate-300 space-y-2 font-bold">
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>VG20, YT, IG4, F3, BP6, R3</li>
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>Eletro: VG20–YT 2Hz</li>
-            </ul>
-          </div>
-          <div className="space-y-4">
-            <p className="text-[10px] text-emerald-500 uppercase font-black tracking-[0.2em]">Moxa / Auriculo</p>
-            <ul className="text-sm text-slate-300 space-y-2 font-bold">
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Moxa: VC6, R3</li>
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Auriculo: Shenmen, Rim, Simpático</li>
-            </ul>
-          </div>
-          <div className="space-y-4">
-            <p className="text-[10px] text-amber-500 uppercase font-black tracking-[0.2em]">Manual / Exercício</p>
-            <ul className="text-sm text-slate-300 space-y-2 font-bold">
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Liberação miofascial lombar</li>
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Eletropilates: controle motor</li>
-            </ul>
-          </div>
-        </div>
-      </Card>
-
-      <div className="flex items-center justify-between mt-12 mb-4">
-        <div className="space-y-1">
-          <h2 className="text-xl font-black text-white uppercase tracking-tighter">Dashboard <span className="text-indigo-500">Bioimpedância</span></h2>
-          <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Análise de Composição Corporal e Celular</p>
-        </div>
-        {filteredSessoes.length > 1 && (
-          <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-xl border border-slate-800">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Sessão:</span>
-            <select 
-              className="text-[10px] font-black bg-black border border-slate-800 text-white rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-              value={selectedSessaoId || currentSessao?.id || ''}
-              onChange={(e) => setSelectedSessaoId(e.target.value)}
-            >
-              {filteredSessoes.map(s => (
-                <option key={s.id} value={s.id} className="bg-black">
-                  {new Date(s.data_sessao).toLocaleDateString('pt-BR')} - Sessão {s.sessao_n}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-      <BioimpedanceDashboard 
-        sessao={currentSessao} 
-        paciente={selectedPaciente} 
-        profissional={profissionais.find(p => p.id === profissionalId)} 
-      />
-
-      {/* 13. LINHA FINAL (PRONTUÁRIO) */}
-      <Card className="bg-black border-slate-800 rounded-3xl shadow-2xl p-8">
-        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">LINHA FINAL (PRONTUÁRIO)</h3>
+        <div className="space-y-12">
+        {/* SEÇÃO 1: VFC PRÉ E PÓS */}
         <div className="space-y-6">
-          <div className="bg-slate-900/30 p-6 rounded-2xl border border-slate-800/50">
-            <p className="text-sm text-slate-300 leading-relaxed font-bold font-mono whitespace-pre-wrap">
-              {latestSessao?.contexto_clinico?.conduta || 'Paciente apresenta melhora nos índices de variabilidade da frequência cardíaca. Mantida conduta de acupuntura sistêmica e eletroestimulação.'}
-              {"\n\n"}
-              Pontos: VG20, YT, IG4, F3, BP6, R3. Eletro: 2Hz.
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-1 bg-indigo-600 rounded-full" />
+            <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">VFC PRÉ E PÓS</h2>
           </div>
-          <div className="flex justify-end">
-            <Button variant="outline" className="bg-slate-900 text-white border-slate-800 hover:bg-slate-800 rounded-xl font-bold uppercase tracking-wider text-xs px-8 h-12" icon={Download}>Copiar Prontuário</Button>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* 2. BLOCO PRINCIPAL — ESTADO ATUAL */}
+            <Card className="border-t-4 border-t-blue-500">
+              <div className="space-y-6 text-center py-2">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">SAUA ATUAL</h3>
+                <div className="space-y-1">
+                  <p className={cn("text-7xl font-black tracking-tighter", getSauaColor(sauaAtual))}>{sauaAtual}</p>
+                  <p className="text-lg font-bold text-slate-900 uppercase tracking-wider">{latestSessao?.resultados_automaticos?.classificacao || 'N/A'}</p>
+                </div>
+                <div className="flex justify-center gap-6 text-sm font-medium text-slate-500">
+                  <div className="text-center">
+                    <p className="text-slate-400 text-[10px] uppercase">RMSSD</p>
+                    <p className="text-slate-900">{latestSessao?.vfc_pre_pos?.rmssd?.pos || 0} ms</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-slate-400 text-[10px] uppercase">FC</p>
+                    <p className="text-slate-900">{latestSessao?.vfc_pre_pos?.fc_media?.pos || 0} bpm</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-slate-400 text-[10px] uppercase">TP</p>
+                    <p className="text-slate-900">{latestSessao?.vfc_pre_pos?.total_power?.pos || 0} ms²</p>
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl">
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    <span className="font-bold text-slate-900 uppercase">STATUS:</span> {latestSessao?.resultados_automaticos?.integrado || 'Modulação autonômica em análise.'}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* 3. RESPOSTA AGUDA DA SESSÃO */}
+            <Card className="border-t-4 border-t-emerald-500">
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">RESPOSTA DA SESSÃO</h3>
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-2 sm:gap-0">
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">SAUA</p>
+                      <p className="text-2xl font-black text-slate-900">{sauaPre} → {sauaAtual}</p>
+                    </div>
+                    <div className="sm:text-right">
+                      <p className={cn("text-lg font-bold", das >= 0 ? "text-emerald-600" : "text-red-600")}>
+                        DAS: {das >= 0 ? '+' : ''}{das}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-medium">({das >= 0 ? 'Resposta positiva' : 'Resposta negativa'})</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-2 border-y border-slate-50">
+                    <div>
+                      <p className="text-[9px] text-slate-400 uppercase font-bold">RMSSD</p>
+                      <p className="text-sm font-bold text-slate-700">{latestSessao?.vfc_pre_pos?.rmssd?.pre} → {latestSessao?.vfc_pre_pos?.rmssd?.pos}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-slate-400 uppercase font-bold">SDNN</p>
+                      <p className="text-sm font-bold text-slate-700">{latestSessao?.vfc_pre_pos?.sdnn?.pre} → {latestSessao?.vfc_pre_pos?.sdnn?.pos}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-slate-400 uppercase font-bold">TP</p>
+                      <p className="text-sm font-bold text-slate-700">{latestSessao?.vfc_pre_pos?.total_power?.pre} → {latestSessao?.vfc_pre_pos?.total_power?.pos}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">IRA</p>
+                      <p className="text-lg font-bold text-slate-900">{ira >= 0 ? '+' : ''}{ira}</p>
+                    </div>
+                    <div className="bg-emerald-50 px-3 py-1 rounded-full">
+                      <p className="text-[10px] font-bold text-emerald-700 uppercase">Favorável</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* 5. EVOLUÇÃO DA JORNADA */}
+            <Card title="EVOLUÇÃO DA JORNADA" icon={TrendingUp}>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-0">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">SAUA Inicial → Atual</p>
+                    <p className="text-2xl font-black text-slate-900">
+                      {firstSessao?.resultados_automaticos?.saua_pre || '0'} → {sauaAtual}
+                    </p>
+                  </div>
+                  <div className="sm:text-right">
+                    <p className="text-lg font-bold text-blue-600">IET: {iet >= 0 ? '+' : ''}{iet}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">(Boa evolução)</p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-50">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">TENDÊNCIA:</p>
+                  <p className="text-xs font-bold text-emerald-600 uppercase">Melhora consistente</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* 6. SUSTENTAÇÃO CLÍNICA */}
+            <Card title="SUSTENTAÇÃO CLÍNICA" icon={RefreshCw}>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-0">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">ISC (Sustentação)</p>
+                    <p className="text-2xl font-black text-slate-900">{isc >= 0 ? '+' : ''}{isc}</p>
+                  </div>
+                  <div className="sm:text-right">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Pré Atual vs Anterior</p>
+                    <p className="text-lg font-bold text-slate-700">
+                      {sauaPre} → {previousSessao?.resultados_automaticos?.saua_pre || sauaPre}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-50">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">CLASSIFICAÇÃO:</p>
+                  <p className="text-xs font-bold text-amber-600 uppercase">Sustentação parcial</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* 7. ANÁLISE LONGITUDINAL */}
+            <Card title="ANÁLISE LONGITUDINAL" icon={History}>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-0">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">IR (Recorrência)</p>
+                    <p className="text-2xl font-black text-slate-900">{ir >= 0 ? '+' : ''}{ir}</p>
+                  </div>
+                  <div className="sm:text-right">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Última Alta vs Atual</p>
+                    <p className="text-lg font-bold text-slate-700">68 → {sauaAtual}</p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-50">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">CLASSIFICAÇÃO:</p>
+                  <p className="text-xs font-bold text-blue-600 uppercase">Retorno estável</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* GRÁFICOS VFC */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card title="Evolução SAUA (Linha do Tempo)">
+              <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorSaua" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} domain={[0, 100]} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                    <Area type="monotone" dataKey="saua" name="SAUA" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSaua)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            <Card title="Evolução RMSSD (Pré vs Pós)">
+              <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                    <Line type="monotone" dataKey="rmssd_pre" name="RMSSD Pré" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="rmssd" name="RMSSD Pós" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
           </div>
         </div>
-      </Card>
+
+        {/* SEÇÃO 2: CONTEXTO CLÍNICO COMPLEMENTAR */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-1 bg-amber-500 rounded-full" />
+            <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">CONTEXTO CLÍNICO COMPLEMENTAR</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* 8. CONTEXTO FUNCIONAL + MOOD + SONO */}
+            <Card title="CONTEXTO FUNCIONAL E BEM-ESTAR" icon={Activity}>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Dor (EVA)</p>
+                  <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.dor_eva || 0}/10</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Sono (Horas)</p>
+                  <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.horas_sono || 0}h</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Mobilidade</p>
+                  <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.mobilidade || 0}/10</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Força</p>
+                  <p className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.forca || 0}/10</p>
+                </div>
+                <div className="space-y-1 col-span-2 pt-2 border-t border-slate-50">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Estado de Humor</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-2xl">
+                      {latestSessao?.contexto_clinico?.estado_humor === 'Péssimo' ? '😞' : 
+                       latestSessao?.contexto_clinico?.estado_humor === 'Ruim' ? '🙁' :
+                       latestSessao?.contexto_clinico?.estado_humor === 'Neutro' ? '😐' :
+                       latestSessao?.contexto_clinico?.estado_humor === 'Bom' ? '🙂' :
+                       latestSessao?.contexto_clinico?.estado_humor === 'Excelente' ? '😄' : '😐'}
+                    </span>
+                    <span className="text-sm font-bold text-slate-700">{latestSessao?.contexto_clinico?.estado_humor || 'Neutro'}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
+                <p className="text-[10px] text-slate-400 uppercase font-bold">SCORE LOCOMOTOR:</p>
+                <p className="text-lg font-black text-indigo-600">{latestSessao?.resultados_automaticos?.locomotor || 0}/10</p>
+              </div>
+            </Card>
+
+            {/* 4. DECISÃO CLÍNICA (AÇÃO) */}
+            <Card className="border-t-4 border-t-amber-500">
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">DECISÃO CLÍNICA</h3>
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 size={18} className="text-amber-600 mt-0.5" />
+                    <p className="text-sm font-bold text-amber-900">{latestSessao?.contexto_clinico?.conduta || 'Manter conduta atual com monitoramento.'}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">JUSTIFICATIVA:</p>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    {latestSessao?.resultados_automaticos?.analise_texto || 'Boa resposta autonômica aguda com tendência de estabilização.'}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">RISCO:</p>
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Baixo</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* 10. ALERTAS CLÍNICOS */}
+            <Card title="ALERTAS CLÍNICOS" icon={AlertCircle} className="bg-red-50/30">
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 text-red-600">
+                  <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                  <p className="text-xs font-bold">Sustentação parcial entre sessões</p>
+                </div>
+                <div className="flex items-start gap-2 text-amber-600">
+                  <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                  <p className="text-xs font-bold">Total Power ainda reduzido</p>
+                </div>
+                <div className="pt-2 border-t border-red-100">
+                  <p className="text-[10px] text-slate-400 font-medium italic">Nenhum alerta crítico no momento</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* SEÇÃO 3: BIOIMPEDÂNCIA */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-1 bg-emerald-600 rounded-full" />
+              <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">BIOIMPEDÂNCIA</h2>
+            </div>
+            {filteredSessoes.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Sessão:</span>
+                <select 
+                  className="text-[10px] font-bold bg-slate-50 border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500"
+                  value={selectedSessaoId || currentSessao?.id || ''}
+                  onChange={(e) => setSelectedSessaoId(e.target.value)}
+                >
+                  {filteredSessoes.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {new Date(s.data_sessao).toLocaleDateString('pt-BR')} - Sessão {s.sessao_n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          
+          <BioimpedanceDashboard 
+            sessao={currentSessao} 
+            paciente={selectedPaciente} 
+            profissional={profissionais.find(p => p.id === profissionalId)} 
+          />
+        </div>
+
+        {/* SEÇÃO 4: PLANO E PRONTUÁRIO */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-1 bg-slate-900 rounded-full" />
+            <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">PLANO E PRONTUÁRIO</h2>
+          </div>
+
+          <div className="space-y-6">
+            {/* 12. PLANO TERAPÊUTICO */}
+            <Card title="PLANO TERAPÊUTICO" icon={ClipboardList}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Acupuntura / Eletro</p>
+                  <ul className="text-sm text-slate-700 space-y-1 list-disc list-inside">
+                    <li>VG20, YT, IG4, F3, BP6, R3</li>
+                    <li>Eletro: VG20–YT 2Hz</li>
+                  </ul>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Moxa / Auriculo</p>
+                  <ul className="text-sm text-slate-700 space-y-1 list-disc list-inside">
+                    <li>Moxa: VC6, R3</li>
+                    <li>Auriculo: Shenmen, Rim, Simpático</li>
+                  </ul>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Manual / Exercício</p>
+                  <ul className="text-sm text-slate-700 space-y-1 list-disc list-inside">
+                    <li>Liberação miofascial lombar</li>
+                    <li>Eletropilates: controle motor</li>
+                  </ul>
+                </div>
+              </div>
+            </Card>
+
+            {/* 13. LINHA FINAL (PRONTUÁRIO) */}
+            <Card title="LINHA FINAL (PRONTUÁRIO)" icon={FileText} className="bg-slate-900 text-white">
+              <div className="space-y-4">
+                <p className="text-sm text-slate-300 leading-relaxed font-mono">
+                  {latestSessao?.contexto_clinico?.conduta || 'Paciente apresenta melhora nos índices de variabilidade da frequência cardíaca. Mantida conduta de acupuntura sistêmica e eletroestimulação.'}
+                  {"\n\n"}
+                  Pontos: VG20, YT, IG4, F3, BP6, R3. Eletro: 2Hz.
+                </p>
+                <div className="flex justify-end">
+                  <Button variant="outline" className="text-white border-white/20 hover:bg-white/10" icon={Download}>Copiar Prontuário</Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -3047,7 +3034,7 @@ function ProntuarioView({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
                     <div className="p-3 bg-slate-50 rounded-2xl text-center">
                       <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">RMSSD Pré</p>
                       <p className="text-lg font-bold text-slate-900">{s.vfc_pre_pos?.rmssd.pre.toFixed(1)}</p>
@@ -3056,7 +3043,7 @@ function ProntuarioView({
                       <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">RMSSD Pós</p>
                       <p className="text-lg font-bold text-slate-900">{s.vfc_pre_pos?.rmssd.pos.toFixed(1)}</p>
                     </div>
-                    <div className="p-3 bg-indigo-50 rounded-2xl text-center">
+                    <div className="p-3 bg-indigo-50 rounded-2xl text-center col-span-2 sm:col-span-1">
                       <p className="text-[10px] text-indigo-400 font-bold uppercase mb-1">Delta</p>
                       <p className="text-lg font-bold text-indigo-600">
                         {((s.vfc_pre_pos?.rmssd.pos! - s.vfc_pre_pos?.rmssd.pre!) / s.vfc_pre_pos?.rmssd.pre! * 100).toFixed(1)}%
@@ -4061,7 +4048,7 @@ function FormularioSessaoView({ pacientes, jornadas, profissionais, user, pacien
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       <div className="bg-indigo-950 text-white px-6 py-4 rounded-2xl flex items-center justify-between shadow-xl">
-        <h2 className="text-xl font-bold tracking-tight uppercase">UPON ACTION | FORMULÁRIO DE ENTRADA E ANÁLISE DA SESSÃO ATUAL</h2>
+        <h2 className="text-xl font-bold tracking-tight uppercase">FORMULÁRIO DE ENTRADA E ANÁLISE DA SESSÃO ATUAL</h2>
         <Activity className="opacity-50" size={24} />
       </div>
 
@@ -4275,7 +4262,7 @@ function FormularioSessaoView({ pacientes, jornadas, profissionais, user, pacien
 
               <div className="col-span-1 md:col-span-4 mt-4 border-t pt-4">
                 <label className="text-sm font-medium text-[var(--text-main)]">Estado de Humor</label>
-                <div className="flex gap-2 p-1 bg-slate-50 rounded-lg border border-slate-200 w-fit">
+                <div className="flex flex-wrap gap-2 p-1 bg-slate-50 rounded-lg border border-slate-200 w-fit">
                   {moods.map((m) => (
                     <button
                       key={m.label}
@@ -4389,16 +4376,16 @@ function FormularioSessaoView({ pacientes, jornadas, profissionais, user, pacien
       {/* Bioimpedance Preview Modal */}
       <AnimatePresence>
         {showBioPreview && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-black w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-800 shadow-2xl relative"
+              className="bg-white w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 shadow-2xl relative"
             >
               <button 
                 onClick={() => setShowBioPreview(false)}
-                className="absolute top-6 right-6 text-white/50 hover:text-white z-10 p-2 bg-white/10 rounded-full transition-colors"
+                className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 z-10 p-2 bg-slate-100 rounded-full transition-colors"
               >
                 <X size={24} />
               </button>
